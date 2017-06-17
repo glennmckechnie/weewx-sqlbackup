@@ -74,7 +74,7 @@ class MYSQLBackup(SearchList):
         this addition. There are many options eg:-
         @daily, @weekly, @monthly, etc
         """
-        #self.bup2_dir = self.generator.config_dict['StdReport']['MYSQLbackup']['sql_bup_dir']
+        self.bup2_dir = self.generator.config_dict['StdReport']['MYSQLbackup']['sql_bup_dir']
         #self.bup2_dir = self.generator.config_dict['mysql_bup_dir']
         # essentials specific to weewx, should be able to get some of them directly from weewx.conf?
         self.user = self.generator.skin_dict['MYSQLBackup']['mysql_user']
@@ -112,7 +112,7 @@ class MYSQLBackup(SearchList):
         # %H index by the hour - it assumes you're generating a page every hour. 24 pages will be cycled through.
         # %d would index by the day - it will cycle through a month of days (28, 30, 31)
         # It's a hack, but it will work if you're attentive.
-        point_index = time.strftime("%H")
+        now_link = time.strftime("%H")
 
         past_time = int(time.time()) - int(self.tp_eriod)  # then for the dump process
         #https://stackoverflow.com/questions/3682748/converting-unix-timestamp-string-to-readable-date-in-python
@@ -150,6 +150,8 @@ class MYSQLBackup(SearchList):
             syslog.syslog(syslog.LOG_INFO, "mysqlbackup:DEBUG: command used was %s" % (cmd))
 
         if self.gen_report:
+            # Output for a report?
+            # ugly html generation,
             t3= time.time()
             head_file = "/tmp/head.html"
             tail_file = "/tmp/tail.html"
@@ -157,23 +159,26 @@ class MYSQLBackup(SearchList):
             t2t_header = "/etc/weewx/skins/mysqlbackup/t2header"
             html_rpt_dir = "%s/mysqlbackup" % self.html_root
             i_ndex = "index"
+
             if not os.path.exists(html_rpt_dir):
                 os.makedirs(html_rpt_dir)
-            # Output for a report?
-            # ugly extract.html generation,
-            # broken pipe error is due to head truncating the operation?
-            # indexing links work for hourly generation only
 #           os.system("echo '\n System stats and Latest Mysqldump report \n by mysqlbackup \n Last updated: %%mtime(%A %B %d, %Y) \n' > %s " % (t2t_file))
 #           os.system("echo '\n System stats and Latest Mysqldump report \n by mysqlbackup \n Last updated: "\\%\\%mtime(\%A \%B \%d, \%Y)" \n' > %s " % (t2t_file))
             # I give in. I'll use an include file - just how do you pass a literal %?
             os.system("cat %s > %s " % (t2t_header, t2t_file))
-            if int(point_index) >= int("1"):
-                past_index = int(point_index) - int("1")
-                in_link = '[Latest page %s.html] | Previous pages: [%s %s-%s.html]' % (i_ndex, past_index, i_ndex, past_index)
-            else:
-                in_link = 'First page: [%s %s-%s.html]' % (point_index, i_ndex, point_index)
-            os.system("echo '\n\nFull backups are stored in the //%s// directory\n====================\n %s \n====================\n' >> %s" % (dump_dir, in_link, t2t_file))
+            # indexing links work for hourly generation only
+	    if mysql_tp_eriod == "86400" :
+                if int(now_link) >= int("1"):
+                    back_link = int(now_link) - int("1")
+                    in_link = '[Latest page %s.html] | Previous pages: [%02d %s-%02d.html]' % (i_ndex, back_link, i_ndex, back_link)
+                else:
+                    in_link = '[Latest page %s.html] | First page: [%s %s-%s.html]' % (i_ndex, now_link, i_ndex, now_link)
+                os.system("echo '\n\nFull backups are stored in the //%s// directory\n====================\n %s \n====================\n' >> %s" % (
+                    dump_dir, in_link, t2t_file))
+	   # elif mysql_tp_eriod = "86400" :
+
             os.system("echo '=== Extract from Database dump file: ===\n```' >> %s " % (t2t_file))
+            # broken pipe error is due to head truncating the operation?
             my_head = "zcat  %s | head -n90 > %s" % (dump_file, head_file)
             os.system(my_head)
             my_tail = "zcat %s | tail -n20 > %s" % (dump_file, tail_file)
@@ -188,11 +193,12 @@ class MYSQLBackup(SearchList):
             os.system("echo '```\n--------------------\n=== Mounted file systems: ===\n```' >> %s " % (t2t_file))
             os.system("mount >> %s" % t2t_file)
             os.system("echo '\n```\n' >> %s " % (t2t_file))
-            os.system("txt2tags -t html --infile %s --outfile %s/%s-%s.html " % (t2t_file, html_rpt_dir, i_ndex, point_index))
-            os.system('cd %s && ln -sf %s-%s.html %s.html' % (html_rpt_dir, i_ndex, point_index, i_ndex))
+            os.system("txt2tags -t html --infile %s --outfile %s/%s-%s.html " % (t2t_file, html_rpt_dir, i_ndex, now_link))
+            os.system('cd %s && ln -sf %s-%s.html %s.html' % (html_rpt_dir, i_ndex, now_link, i_ndex))
             if weewx.debug >= 2 or self.sql_debug >= 2 :
                 t4= time.time() 
-                syslog.syslog(syslog.LOG_INFO, "mysqlbackup:DEBUG: Created %s/%s-%s.html & %s/%s.html in %.2f secs" % (html_rpt_dir, i_ndex, point_index, html_rpt_dir, i_ndex, t4-t3))
+                syslog.syslog(syslog.LOG_INFO, "mysqlbackup:DEBUG: Created %s/%s-%s.html & %s/%s.html in %.2f secs" % (
+                    html_rpt_dir, i_ndex, now_link, html_rpt_dir, i_ndex, t4-t3))
 
 
         # and then the process's finishing time
