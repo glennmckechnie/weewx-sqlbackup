@@ -1,0 +1,121 @@
+## Copyright 2009-2017 Tom Keffer, Matthew Wall
+## Distributed under terms of GPLv3.  See LICENSE.txt for your rights.
+#errorCatcher Echo
+## Specifying an encoding of UTF-8 is usually safe, but if the text is actually
+## in Latin-1, then you should replace the string "UTF-8" with "latin-1".  If
+## you do this, you should also change the charset in 'Content-Type' as well.
+#encoding UTF-8
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en">
+  <head profile="http://www.w3.org/2005/10/profile">
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta http-equiv="refresh" content="900">
+    <title>$station.location</title>
+    <link rel="icon" type="image/png" href="favicon.ico" />
+    <link rel="stylesheet" type="text/css" href="standard.css"/>
+    <script type="text/javascript" src="standard.js"></script>
+  </head>
+
+  <body onload="setup();">
+    #include "../Standard2/titlebar.inc"
+    <div id="contents">
+      <div id="widget_group">
+        #include "../Standard2/about.inc"
+        #include "../Standard2/current.inc"
+        #include "../Standard2/cfaforecast.inc"
+        #include "../Standard2/rainforecast.inc"
+        #include "../Standard2/links.inc"
+        #include "../Standard2/radar.inc"
+        #include "../Standard2/satellite.inc"
+        #include "../Standard2/sunmoon.inc"
+        #include "../Standard2/sensors.inc"
+        ##include "../Standard2/hilo.inc"
+        #include "../Standard2/map.inc"
+      </div>
+
+      <div id="plot_group">
+        <div id="history_widget" class="widget">
+          <div id="plot_title" class="widget_title">History:&nbsp;&nbsp;
+            <a class="button_selected" id="button_history_day"
+               onclick="choose_history('day')">Day</a>
+            <a class="button" id="button_history_week"
+               onclick="choose_history('week')">Week</a>
+            <a class="button" id="button_history_month"
+               onclick="choose_history('month')">Month</a>
+            <a class="button" id="button_history_year"
+               onclick="choose_history('year')">Year</a>
+            <a class="button" id="button_history_dayrain"
+               onclick="choose_history('dayrain')">(Day rain</a>
+            <a class="button" id="button_history_weekrain"
+               onclick="choose_history('weekrain')">Week rain)</a>
+          </div>
+          <div id="history_day" class="plot_container" style="display:none">
+	    <p>This is a summary of the output from the mysqlbackup skin that last ran on 
+	    <b>
+             #include "/tmp/inc/timestamp.inc"
+	    </b></br>
+	    This skin generates a partial backup of the mysql database and stores it locally according to the settings in the skin config file.</br>
+	    Details on usage and recovery are available there. (The skin can be found on github as <a href="https://github.com/glennmckechnie/weewx-mysqlbackup">mysqlbackup.)</a>
+	    <hr>
+	   <h2> Extract from Database dump file: </h2>
+	    <pre>
+             #include "/tmp/inc/head.inc"
+	     [...]
+             #include "/tmp/inc/tail.inc"
+	    </pre>
+	    <hr>
+	   <h2> Disk Usage: </h2>
+	    <pre>
+             #include "/tmp/inc/df.inc"
+	    </pre>
+	    <hr>
+	   <h2> Memory Usage: </h2>
+	    <pre>
+	     #include "/tmp/inc/free.inc"
+	    </pre>
+	    <hr>
+	   <h2> Mounted file systems: </h2>
+	    <pre>
+	     #include "/tmp/inc/mount.inc"
+	    </pre>
+          </div>
+          <div id="history_week" class="plot_container" style="display:none">
+            #if $week.extraTemp1.has_data
+            <img src="weektemp1.png"     alt="$obs.label.extraTemp1" />
+            #end if
+            <img src="weekrx.png"        alt="$obs.label.rxCheckPercent"/>
+          </div>
+          <div id="history_month" class="plot_container" style="display:none">
+            <img src="monthrx.png"        alt="$obs.label.rxCheckPercent"/>
+          </div>
+          <div id="history_year" class="plot_container" style="display:none">
+            <img src="yearhilow.png"      alt="$obs.label.HiLo"/>
+          </div>
+          <div id="history_dayrain" class="plot_container" style="display:none">
+            <img src="dayrainCount4.png"     alt="$obs.label.rainCount4" />
+          </div>
+          <div id="history_weekrain" class="plot_container" style="display:none">
+            <img src="weekrainCount4.png"     alt="$obs.label.rainCount4" />
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <p class="footnote">
+      This station uses an $station.hardware to collect data from various one-wire sensors 
+      that are connected to a <a href="https://www.raspberrypi.org/help/faqs/">raspberry Pi 2</a> 
+      micro computer.<br>
+      This data is then collected and displayed by <a href="http://weewx.com/">weeWX</a>, an
+      experimental weather software system written in Python.<br>
+      This raspberry pi runs with <a href="https://github.com/glennmckechnie/rorpi-raspberrypi"> a read only filesystem</a>
+    </p>
+    <p class="footnote">
+     Radar, satellite, and rain images are courtesy of the Australian Government Bureau of Meteorology, 2017.<br>
+     Fire rating image is courtesy of CFA Victoria, 2017
+    </p>
+
+    #include "../Standard2/analytics.inc"
+
+</body>
+
+</html>
