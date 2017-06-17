@@ -108,7 +108,11 @@ class MYSQLBackup(SearchList):
         #https://stackoverflow.com/questions/4271740/how-can-i-use-python-to-get-the-system-hostname
         this_host = os.uname()[1]
         file_stamp = time.strftime("%Y%m%d%H%M")
-	rep_index = time.strftime("%H")
+        # the following is used by the report generation for the html historical (previous page) links
+        # %H index by the hour - it assumes you're generating a page every hour. 24 pages will be cycled through.
+        # %d would index by the day - it will cycle through a month of days (28, 30, 31)
+        # It's a hack, but it will work if you're attentive.
+        point_index = time.strftime("%H")
 
         past_time = int(time.time()) - int(self.tp_eriod)  # then for the dump process
         #https://stackoverflow.com/questions/3682748/converting-unix-timestamp-string-to-readable-date-in-python
@@ -121,55 +125,58 @@ class MYSQLBackup(SearchList):
             date_dir_str = time.strftime("/%Y%m%d")
         else:
             date_dir_str = ''
-        dump_bup_dir = self.bup_dir + "%s" % (date_dir_str)
+        dump_dir = self.bup_dir + "%s" % (date_dir_str)
 
         # https://stackoverflow.com/questions/273192/how-can-i-create-a-directory-if-it-does-not-exist
-        if not os.path.exists(dump_bup_dir):
-            os.makedirs(dump_bup_dir)
+        if not os.path.exists(dump_dir):
+            os.makedirs(dump_dir)
         if weewx.debug >= 2 or self.sql_debug >= 2:
-            syslog.syslog(syslog.LOG_INFO, "mysqlbackup:DEBUG: directory used to store mmysqldump file - %s" % dump_bup_dir)
+            syslog.syslog(syslog.LOG_INFO, "mysqlbackup:DEBUG: directory used to store mmysqldump file - %s" % dump_dir)
 
-        bup_file = dump_bup_dir + "/%s-host.%s-%s-%s.gz"  % (self.dbase, this_host, file_stamp, self.tp_label)
+        dump_file = dump_dir + "/%s-host.%s-%s-%s.gz"  % (self.dbase, this_host, file_stamp, self.tp_label)
         cmd = "/usr/bin/mysqldump -u%s -p%s -h%s -q  %s %s -w\"dateTime>%s\" %s --routines --triggers --single-transaction --skip-opt" %(
             self.user, self.passwd, self.host, self.dbase, self.table, past_time, self.ignore)
 
         p1 = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True)
         dump_output = p1.communicate()[0]
-        with gzip.open(bup_file, 'wb') as f:
+        with gzip.open(dump_file, 'wb') as f:
             f.write(dump_output)
         f.close()
 
         if weewx.debug >= 2 or self.sql_debug >= 2:
             self.passwd = "XxXxX"
+            cmd = "/usr/bin/mysqldump -u%s -p%s -h%s -q  %s %s -w\"dateTime>%s\" %s --routines --triggers --single-transaction --skip-opt" %(
+                self.user, self.passwd, self.host, self.dbase, self.table, past_time, self.ignore)
             syslog.syslog(syslog.LOG_INFO, "mysqlbackup:DEBUG: command used was %s" % (cmd))
 
         if self.gen_report:
-	    t3= time.time()
+            t3= time.time()
             head_file = "/tmp/head.html"
             tail_file = "/tmp/tail.html"
             t2t_file = "/tmp/temp.t2t"
-	    t2t_header = "/etc/weewx/skins/mysqlbackup/t2header"
-	    html_rep_dir = "%s/dumpreports" % self.html_root
-            index_extract = "%s/extract.html" % (html_rep_dir)
-            extract_html = "%s/extract-%s.html" % (html_rep_dir, rep_index)
-	    if not os.path.exists(html_rep_dir):
-	        os.makedirs(html_rep_dir)
+            t2t_header = "/etc/weewx/skins/mysqlbackup/t2header"
+            html_rpt_dir = "%s/mysqlbackup" % self.html_root
+            i_ndex = "index"
+            if not os.path.exists(html_rpt_dir):
+                os.makedirs(html_rpt_dir)
             # Output for a report?
             # ugly extract.html generation,
-	    # broken pipe error is due to head truncating the operation?
+            # broken pipe error is due to head truncating the operation?
+            # indexing links work for hourly generation only
 #           os.system("echo '\n System stats and Latest Mysqldump report \n by mysqlbackup \n Last updated: %%mtime(%A %B %d, %Y) \n' > %s " % (t2t_file))
 #           os.system("echo '\n System stats and Latest Mysqldump report \n by mysqlbackup \n Last updated: "\\%\\%mtime(\%A \%B \%d, \%Y)" \n' > %s " % (t2t_file))
+            # I give in. I'll use an include file - just how do you pass a literal %?
             os.system("cat %s > %s " % (t2t_header, t2t_file))
-	    if int(rep_index) >= int("1"):
-	        rep_index = int(rep_index) - int("1")
-	        in_link = '[Latest page extract.html] | Previous pages: [%s extract-%s.html]' % (rep_index, rep_index)
-	    else:
-	        in_link = 'First page: [%s extract-%s.html]' % (rep_index, rep_index)
-	    os.system("echo '%s\n====================\n' >> %s" % (in_link, t2t_file))
+            if int(point_index) >= int("1"):
+                past_index = int(point_index) - int("1")
+                in_link = '[Latest page %s.html] | Previous pages: [%s %s-%s.html]' % (i_ndex, past_index, i_ndex, past_index)
+            else:
+                in_link = 'First page: [%s %s-%s.html]' % (point_index, i_ndex, point_index)
+            os.system("echo '\n\nFull backups are stored in the //%s// directory\n====================\n %s \n====================\n' >> %s" % (dump_dir, in_link, t2t_file))
             os.system("echo '=== Extract from Database dump file: ===\n```' >> %s " % (t2t_file))
-            my_head = "zcat  %s | head -n90 > %s" % (bup_file, head_file)
+            my_head = "zcat  %s | head -n90 > %s" % (dump_file, head_file)
             os.system(my_head)
-            my_tail = "zcat %s | tail -n20 > %s" % (bup_file, tail_file)
+            my_tail = "zcat %s | tail -n20 > %s" % (dump_file, tail_file)
             os.system(my_tail)
             os.system("cat %s >> %s " % (head_file, t2t_file))
             os.system("echo '\n[...]\n' >> %s " % (t2t_file))
@@ -181,17 +188,17 @@ class MYSQLBackup(SearchList):
             os.system("echo '```\n--------------------\n=== Mounted file systems: ===\n```' >> %s " % (t2t_file))
             os.system("mount >> %s" % t2t_file)
             os.system("echo '\n```\n' >> %s " % (t2t_file))
-            os.system("txt2tags -t html --infile %s --outfile %s " % (t2t_file, extract_html))
-	    os.system('ln -sf %s %s' % (extract_html, index_extract))
+            os.system("txt2tags -t html --infile %s --outfile %s/%s-%s.html " % (t2t_file, html_rpt_dir, i_ndex, point_index))
+            os.system('cd %s && ln -sf %s-%s.html %s.html' % (html_rpt_dir, i_ndex, point_index, i_ndex))
             if weewx.debug >= 2 or self.sql_debug >= 2 :
                 t4= time.time() 
-                syslog.syslog(syslog.LOG_INFO, "mysqlbackup:DEBUG: Created %s, %s & %s in %.2f secs" % (head_file, tail_file, extract_html, t4-t3))
+                syslog.syslog(syslog.LOG_INFO, "mysqlbackup:DEBUG: Created %s/%s-%s.html & %s/%s.html in %.2f secs" % (html_rpt_dir, i_ndex, point_index, html_rpt_dir, i_ndex, t4-t3))
 
 
         # and then the process's finishing time
         t2= time.time() 
         if weewx.debug >= 2 or self.sql_debug >= 2 :
-            syslog.syslog(syslog.LOG_INFO, "mysqlbackup:DEBUG: Created %s backup in %.2f seconds" % (bup_file, t2-t1))
+            syslog.syslog(syslog.LOG_INFO, "mysqlbackup:DEBUG: Created %s backup in %.2f seconds" % (dump_file, t2-t1))
         else:
             syslog.syslog(syslog.LOG_INFO, "mysqlbackup: Created backup in %.2f seconds" % (t2-t1))
 
