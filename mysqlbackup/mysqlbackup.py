@@ -25,7 +25,7 @@ import weewx.manager
 import weewx.units
 
 
-class RsyncUpload(object):
+class SQLBackup(object):
     """Uploads a directory and all its descendants to a remote server.
 
     Its default behaviour is to keep track of what files have changed,
@@ -97,7 +97,7 @@ class RsyncUpload(object):
 
         Check for rsync error codes and log the obvious ones
         """
-
+	"""
         t1 = time.time()
         # With multiple configs available, prefix with the skin or label name
         # for log clarity
@@ -381,7 +381,8 @@ class RsyncUpload(object):
             #https://stackoverflow.com/questions/13613336/python-concatenate-text-files
             #os.system("cat /var/www/html/weewx/DATA/WL_stickertags.txt >> /var/www/html/weewx/DATA/catALL_WL_stickertags.txt")
             date_cat_str = time.strftime("%Y%m%d")
-            os.system("cat /var/www/html/weewx/DATA/WL_stickertags.txt >> /var/www/html/weewx/DATA/" + date_cat_str + "_WL_stickertags.txt")
+            """
+	os.system("/home/pi/bin/mysql-backup.sh doit")
 
 
 
