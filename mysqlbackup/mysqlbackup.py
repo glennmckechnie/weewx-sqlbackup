@@ -74,6 +74,8 @@ class MYSQLBackup(SearchList):
         this addition. There are many options eg:-
         @daily, @weekly, @monthly, etc
         """
+        #self.bup2_dir = self.generator.config_dict['StdReport']['MYSQLbackup']['sql_bup_dir']
+        #self.bup2_dir = self.generator.config_dict['mysql_bup_dir']
         # essentials specific to weewx, should be able to get some of them directly from weewx.conf?
         self.user = self.generator.skin_dict['MYSQLBackup']['mysql_user']
         self.host = self.generator.skin_dict['MYSQLBackup']['mysql_host']
@@ -81,10 +83,13 @@ class MYSQLBackup(SearchList):
         self.dbase = self.generator.skin_dict['MYSQLBackup']['mysql_database']
         self.table = self.generator.skin_dict['MYSQLBackup'].get('mysql_table',"")
         self.bup_dir = self.generator.skin_dict['MYSQLBackup']['mysql_bup_dir']
+        #self.bup_dir = self.generator.skin_dict['MYSQLBackup']['sql_bup_dir']
         self.dated_dir = to_bool(self.generator.skin_dict['MYSQLBackup'].get('mysql_dated_dir', True))
         # these need to match, let the user do it for now
         self.tp_eriod = self.generator.skin_dict['MYSQLBackup']['mysql_tp_eriod']
         self.tp_label = self.generator.skin_dict['MYSQLBackup']['mysql_tp_label']
+        self.gen_report = to_bool(self.generator.skin_dict['MYSQLBackup'].get('mysql_gen_report', True))
+        self.html_root = self.generator.skin_dict['MYSQLBackup']['html_root']
         # local debug switch
         self.sql_debug = int(self.generator.skin_dict['MYSQLBackup']['sql_debug'])
 
@@ -95,7 +100,7 @@ class MYSQLBackup(SearchList):
         # to prevent an incomplete dump - because there is no dateTime in the metadata table.
         if len(self.table) < 1:
             self.ignore = "--ignore-table=%s.archive_day__metadata" % self.dbase
-            syslog.syslog(syslog.LOG_INFO, "sqlbackup:DEBUG: ALL tables specified, including option %s" % self.ignore)
+            syslog.syslog(syslog.LOG_INFO, "mysqlbackup:DEBUG: ALL tables specified, including option %s" % self.ignore)
         else:
             self.ignore = ""
 
@@ -103,12 +108,13 @@ class MYSQLBackup(SearchList):
         #https://stackoverflow.com/questions/4271740/how-can-i-use-python-to-get-the-system-hostname
         this_host = os.uname()[1]
         file_stamp = time.strftime("%Y%m%d%H%M")
+	rep_index = time.strftime("%H")
 
-        past_time = time.time() - float(self.tp_eriod)  # then for the dump process
+        past_time = int(time.time()) - int(self.tp_eriod)  # then for the dump process
         #https://stackoverflow.com/questions/3682748/converting-unix-timestamp-string-to-readable-date-in-python
         readable_time = (datetime.fromtimestamp(past_time).strftime('%Y-%m-%d %H:%M:%S'))
         if weewx.debug >= 2 or self.sql_debug >= 2:
-            syslog.syslog(syslog.LOG_INFO, "sqlbackup:DEBUG: starting mysqldump from %s" % readable_time)
+            syslog.syslog(syslog.LOG_INFO, "mysqlbackup:DEBUG: starting mysqldump from %s" % readable_time)
         # If true, create the remote directory with a date structure
         # eg: <path to backup directory>/2017/02/12/var/lib/weewx...
         if self.dated_dir:
@@ -121,7 +127,7 @@ class MYSQLBackup(SearchList):
         if not os.path.exists(dump_bup_dir):
             os.makedirs(dump_bup_dir)
         if weewx.debug >= 2 or self.sql_debug >= 2:
-            syslog.syslog(syslog.LOG_INFO, "sqlbackup:DEBUG: directory used for mysqldump - %s" % dump_bup_dir)
+            syslog.syslog(syslog.LOG_INFO, "mysqlbackup:DEBUG: directory used to store mmysqldump file - %s" % dump_bup_dir)
 
         bup_file = dump_bup_dir + "/%s-host.%s-%s-%s.gz"  % (self.dbase, this_host, file_stamp, self.tp_label)
         cmd = "/usr/bin/mysqldump -u%s -p%s -h%s -q  %s %s -w\"dateTime>%s\" %s --routines --triggers --single-transaction --skip-opt" %(
@@ -135,16 +141,59 @@ class MYSQLBackup(SearchList):
 
         if weewx.debug >= 2 or self.sql_debug >= 2:
             self.passwd = "XxXxX"
-            cmd = "/usr/bin/mysqldump -u%s -p%s -h%s -q  %s %s -w\"dateTime>%s\" %s --routines --triggers --single-transaction --skip-opt" %(
-                self.user, self.passwd, self.host, self.dbase, self.table, past_time, self.ignore)
-            syslog.syslog(syslog.LOG_INFO, "sqlbackup:DEBUG: command used was %s" % (cmd))
+            syslog.syslog(syslog.LOG_INFO, "mysqlbackup:DEBUG: command used was %s" % (cmd))
+
+        if self.gen_report:
+	    t3= time.time()
+            head_file = "/tmp/head.html"
+            tail_file = "/tmp/tail.html"
+            t2t_file = "/tmp/temp.t2t"
+	    t2t_header = "/etc/weewx/skins/mysqlbackup/t2header"
+	    html_rep_dir = "%s/dumpreports" % self.html_root
+            index_extract = "%s/extract.html" % (html_rep_dir)
+            extract_html = "%s/extract-%s.html" % (html_rep_dir, rep_index)
+	    if not os.path.exists(html_rep_dir):
+	        os.makedirs(html_rep_dir)
+            # Output for a report?
+            # ugly extract.html generation,
+	    # broken pipe error is due to head truncating the operation?
+#           os.system("echo '\n System stats and Latest Mysqldump report \n by mysqlbackup \n Last updated: %%mtime(%A %B %d, %Y) \n' > %s " % (t2t_file))
+#           os.system("echo '\n System stats and Latest Mysqldump report \n by mysqlbackup \n Last updated: "\\%\\%mtime(\%A \%B \%d, \%Y)" \n' > %s " % (t2t_file))
+            os.system("cat %s > %s " % (t2t_header, t2t_file))
+	    if int(rep_index) >= int("1"):
+	        rep_index = int(rep_index) - int("1")
+	        in_link = '[Latest page extract.html] | Previous pages: [%s extract-%s.html]' % (rep_index, rep_index)
+	    else:
+	        in_link = 'First page: [%s extract-%s.html]' % (rep_index, rep_index)
+	    os.system("echo '%s\n====================\n' >> %s" % (in_link, t2t_file))
+            os.system("echo '=== Extract from Database dump file: ===\n```' >> %s " % (t2t_file))
+            my_head = "zcat  %s | head -n90 > %s" % (bup_file, head_file)
+            os.system(my_head)
+            my_tail = "zcat %s | tail -n20 > %s" % (bup_file, tail_file)
+            os.system(my_tail)
+            os.system("cat %s >> %s " % (head_file, t2t_file))
+            os.system("echo '\n[...]\n' >> %s " % (t2t_file))
+            os.system("cat %s >> %s " % (tail_file, t2t_file))
+            os.system("echo '```\n--------------------\n=== Disk Usage: ===\n```' >> %s " % (t2t_file))
+            os.system("df -h >> %s" % t2t_file)
+            os.system("echo '```\n--------------------\n=== Memory Usage: ===\n```' >> %s " % (t2t_file))
+            os.system("free -h >> %s" % t2t_file)
+            os.system("echo '```\n--------------------\n=== Mounted file systems: ===\n```' >> %s " % (t2t_file))
+            os.system("mount >> %s" % t2t_file)
+            os.system("echo '\n```\n' >> %s " % (t2t_file))
+            os.system("txt2tags -t html --infile %s --outfile %s " % (t2t_file, extract_html))
+	    os.system('ln -sf %s %s' % (extract_html, index_extract))
+            if weewx.debug >= 2 or self.sql_debug >= 2 :
+                t4= time.time() 
+                syslog.syslog(syslog.LOG_INFO, "mysqlbackup:DEBUG: Created %s, %s & %s in %.2f secs" % (head_file, tail_file, extract_html, t4-t3))
+
 
         # and then the process's finishing time
         t2= time.time() 
         if weewx.debug >= 2 or self.sql_debug >= 2 :
-            syslog.syslog(syslog.LOG_INFO, "sqlbackup:DEBUG: Created %s backup in %.2f seconds" % (bup_file, t2-t1))
+            syslog.syslog(syslog.LOG_INFO, "mysqlbackup:DEBUG: Created %s backup in %.2f seconds" % (bup_file, t2-t1))
         else:
-            syslog.syslog(syslog.LOG_INFO, "sqlbackup: Created backup in %.2f seconds" % (t2-t1))
+            syslog.syslog(syslog.LOG_INFO, "mysqlbackup: Created backup in %.2f seconds" % (t2-t1))
 
 # date -d "11-june-2017 21:00:00" +'%s'
 # 1497178800
