@@ -5,7 +5,7 @@
 #
 #    See the file LICENSE.txt for your full rights.
 #
-#
+# Version 0.1  mysqlbackup - working as multi page generator
 
 import os
 import errno
