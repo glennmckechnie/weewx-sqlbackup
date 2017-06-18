@@ -109,7 +109,7 @@ class MYSQLBackup(SearchList):
         #https://stackoverflow.com/questions/3682748/converting-unix-timestamp-string-to-readable-date-in-python
         readable_time = (datetime.fromtimestamp(past_time).strftime('%Y-%m-%d %H:%M:%S'))
         if weewx.debug >= 2 or self.sql_debug >= 2:
-            syslog.syslog(syslog.LOG_INFO, "mysqlbackup:DEBUG: starting mysqldump from %s" % readable_time)
+            syslog.syslog(syslog.LOG_INFO, "mysqlbackup:DEBUG: mysqldump is starting from %s" % readable_time)
         # If true, create the remote directory with a date structure
         # eg: <path to backup directory>/2017/02/12/var/lib/weewx...
         if self.dated_dir:
@@ -122,10 +122,11 @@ class MYSQLBackup(SearchList):
         if not os.path.exists(dump_dir):
             os.makedirs(dump_dir)
         if weewx.debug >= 2 or self.sql_debug >= 2:
-            syslog.syslog(syslog.LOG_INFO, "mysqlbackup:DEBUG: directory used to store mmysqldump file - %s" % dump_dir)
+            syslog.syslog(syslog.LOG_INFO, "mysqlbackup:DEBUG: directory used to store mysqldump file - %s" % dump_dir)
 
         dump_file = dump_dir + "/%s-host.%s-%s-%s.gz"  % (self.dbase, this_host, file_stamp, self.tp_label)
-        cmd = "/usr/bin/mysqldump -u%s -p%s -h%s -q  %s %s -w\"dateTime>%s\" %s --routines --triggers --single-transaction --skip-opt" %(
+       # cmd = "/usr/bin/mysqldump -u%s -p%s -h%s -q  %s %s -w\"dateTime>%s\" %s -R --triggers --single-transaction --skip-opt" %(
+        cmd = "/usr/bin/mysqldump -u%s -p%s -h%s -q  %s %s -w\"dateTime>%s\" %s --single-transaction --skip-opt" %(
             self.user, self.passwd, self.host, self.dbase, self.table, past_time, self.ignore)
 
         p1 = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True)
@@ -136,7 +137,8 @@ class MYSQLBackup(SearchList):
 
         if weewx.debug >= 2 or self.sql_debug >= 2:
             self.passwd = "XxXxX"
-            cmd = "/usr/bin/mysqldump -u%s -p%s -h%s -q  %s %s -w\"dateTime>%s\" %s --routines --triggers --single-transaction --skip-opt" %(
+          #  cmd = "/usr/bin/mysqldump -u%s -p%s -h%s -q  %s %s -w\"dateTime>%s\" %s -R --triggers --single-transaction --skip-opt" %(
+            cmd = "/usr/bin/mysqldump -u%s -p%s -h%s -q  %s %s -w\"dateTime>%s\" %s --single-transaction --skip-opt" %(
                 self.user, self.passwd, self.host, self.dbase, self.table, past_time, self.ignore)
             syslog.syslog(syslog.LOG_INFO, "mysqlbackup:DEBUG: command used was %s" % (cmd))
 
@@ -145,14 +147,13 @@ class MYSQLBackup(SearchList):
             # ugly html generation,
             t3= time.time()
             tmp_inc_dir = "/tmp/inc"
-            stamp_file = "/%s/timestamp.inc" % tmp_inc_dir
-            head_file = "/%s/head.inc" % tmp_inc_dir
-            tail_file = "/%s/tail.inc" % tmp_inc_dir
-            df_file = "/%s/df.inc" % tmp_inc_dir
-            free_file = "/%s/free.inc" % tmp_inc_dir
-            mount_file = "/%s/mount.inc" % tmp_inc_dir
-            inc_file = "/%s/dump.inc" % tmp_inc_dir
-            html_rpt_dir = "%s/mysqlbackup" % self.html_root
+            stamp_file = "%s/timestamp.inc" % tmp_inc_dir
+            head_file = "%s/head.inc" % tmp_inc_dir
+            tail_file = "%s/tail.inc" % tmp_inc_dir
+            df_file = "%s/df.inc" % tmp_inc_dir
+            free_file = "%s/free.inc" % tmp_inc_dir
+            mount_file = "%s/mount.inc" % tmp_inc_dir
+            inc_file = "%s/dump.inc" % tmp_inc_dir
 
             # avoid potential confusion, remove old
             if os.path.exists(tmp_inc_dir):
@@ -160,8 +161,12 @@ class MYSQLBackup(SearchList):
             os.makedirs(tmp_inc_dir)
             gen_time = time.strftime("%A %B %d, %Y at %H:%M")
             os.system("echo %s > %s " % (gen_time, stamp_file))
+            os.system("echo '</b>, starting its capture from <b>%s.\n' >> %s " % (readable_time, stamp_file))
+            #os.system("echo '<br>%s\n' >> %s " % (cmd, stamp_file))
             # broken pipe error is due to head truncating the operation?
-            my_head = "zcat  %s | head -n90 > %s" % (dump_file, head_file)
+            os.system("echo %s > %s " % (cmd, head_file))
+            syslog.syslog(syslog.LOG_INFO, "mysqlbackup:DEBUG: report command used was %s into %s" % (cmd, head_file))
+            my_head = "zcat  %s | head -n100 >> %s" % (dump_file, head_file)
             os.system(my_head)
             my_tail = "zcat %s | tail -n20 > %s" % (dump_file, tail_file)
             os.system(my_tail)
