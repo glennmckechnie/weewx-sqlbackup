@@ -25,7 +25,7 @@ from weewx.cheetahgenerator import SearchList
 from weeutil.weeutil import to_bool
 
 
-class MYSQLBackup(SearchList):
+class MySQLBackup(SearchList):
     """ Notes and WARNINGS
 
     DON'T back the whole database up with this skin. You'll overload weewx and weird
@@ -76,20 +76,20 @@ class MYSQLBackup(SearchList):
         @daily, @weekly, @monthly, etc
         """
         # essentials specific to weewx, should be able to get some of them directly from weewx.conf?
-        self.user = self.generator.skin_dict['MYSQLBackup']['mysql_user']
-        self.host = self.generator.skin_dict['MYSQLBackup']['mysql_host']
-        self.passwd = self.generator.skin_dict['MYSQLBackup']['mysql_pass']
-        self.dbase = self.generator.skin_dict['MYSQLBackup']['mysql_database']
-        self.table = self.generator.skin_dict['MYSQLBackup'].get('mysql_table',"")
-        self.bup_dir = self.generator.skin_dict['MYSQLBackup']['mysql_bup_dir']
-        self.dated_dir = to_bool(self.generator.skin_dict['MYSQLBackup'].get('mysql_dated_dir', True))
+        self.user = self.generator.skin_dict['MySQLBackup']['mysql_user']
+        self.host = self.generator.skin_dict['MySQLBackup']['mysql_host']
+        self.passwd = self.generator.skin_dict['MySQLBackup']['mysql_pass']
+        self.dbase = self.generator.skin_dict['MySQLBackup']['mysql_database']
+        self.table = self.generator.skin_dict['MySQLBackup'].get('mysql_table',"")
+        self.bup_dir = self.generator.skin_dict['MySQLBackup']['mysql_bup_dir']
+        self.dated_dir = to_bool(self.generator.skin_dict['MySQLBackup'].get('mysql_dated_dir', True))
         # these need to match, let the user do it for now
-        self.tp_eriod = self.generator.skin_dict['MYSQLBackup']['mysql_tp_eriod']
-        self.tp_label = self.generator.skin_dict['MYSQLBackup']['mysql_tp_label']
-        self.gen_report = to_bool(self.generator.skin_dict['MYSQLBackup'].get('mysql_gen_report', True))
-        self.html_root = self.generator.skin_dict['MYSQLBackup']['html_root']
+        self.tp_eriod = self.generator.skin_dict['MySQLBackup']['mysql_tp_eriod']
+        self.tp_label = self.generator.skin_dict['MySQLBackup']['mysql_tp_label']
+        self.gen_report = to_bool(self.generator.skin_dict['MySQLBackup'].get('mysql_gen_report', True))
+        self.html_root = self.generator.skin_dict['MySQLBackup']['html_root']
         # local debug switch
-        self.sql_debug = int(self.generator.skin_dict['MYSQLBackup']['sql_debug'])
+        self.sql_debug = int(self.generator.skin_dict['MySQLBackup']['sql_debug'])
 
         t1 = time.time() # this process's start time
 
