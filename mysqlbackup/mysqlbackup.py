@@ -163,9 +163,8 @@ class MYSQLBackup(SearchList):
             os.system("echo %s > %s " % (gen_time, stamp_file))
             os.system("echo '</b>, starting its capture from <b>%s.\n' >> %s " % (readable_time, stamp_file))
             #os.system("echo '<br>%s\n' >> %s " % (cmd, stamp_file))
-            # broken pipe error is due to head truncating the operation?
-            os.system("echo %s > %s " % (cmd, head_file))
-            syslog.syslog(syslog.LOG_INFO, "mysqlbackup:DEBUG: report command used was %s into %s" % (cmd, head_file))
+            os.system("echo '%s\n' > %s " % (cmd, head_file))
+            # broken pipe error from wee_reports appears harmless & is due to head truncating the operation.
             my_head = "zcat  %s | head -n100 >> %s" % (dump_file, head_file)
             os.system(my_head)
             my_tail = "zcat %s | tail -n20 > %s" % (dump_file, tail_file)
