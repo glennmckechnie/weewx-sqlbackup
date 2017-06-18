@@ -75,51 +75,20 @@ class MySQLBackup(SearchList):
         this addition. There are many options eg:-
         @daily, @weekly, @monthly, etc
         """
-       # try:
         # essentials specific to weewx, should be able to get some of them directly from weewx.conf?
         self.user = self.generator.skin_dict['MySQLBackup'].get('mysql_user','weewx')
-       # except KeyError:
-       #     self.user = "weewx"
-       # try:
         self.host = self.generator.skin_dict['MySQLBackup'].get('mysql_host','localhost')
-       # except KeyError:
-       #     self.user = "localhost"
-       # try:
         self.passwd = self.generator.skin_dict['MySQLBackup'].get('mysql_pass','weewx')
-       # except KeyError:
-       #     self.user = "weewx"
-       # try:
         self.dbase = self.generator.skin_dict['MySQLBackup'].get('mysql_database','weewx')
-       # except KeyError:
-       #     self.user = "weewx"
-       # try:
         self.table = self.generator.skin_dict['MySQLBackup'].get('mysql_table','')
-       # except KeyError:
-       #     self.user = "archive"
-       # try:
         self.bup_dir = self.generator.skin_dict['MySQLBackup'].get('mysql_bup_dir','/var/backups')
-       # except KeyError:
-       #     self.user = "/var/backups"
-       # try:
         self.tp_eriod = self.generator.skin_dict['MySQLBackup'].get('mysql_tp_eriod','86400')
-       # except KeyError:
-       #     self.user = "86400"
-       # try:
         self.tp_label = self.generator.skin_dict['MySQLBackup'].get('mysql_tp_label','daily')
-       # except KeyError:
-       #     self.user = "daily"
-       # try:
         self.html_root = self.generator.skin_dict['MySQLBackup'].get('html_root','/var/www/html/weewx')
-       # except KeyError:
-       #     self.user = "/var/www/html/weewx"
-       # try:
-            # local debug switch
-        self.sql_debug = int(self.generator.skin_dict['MySQLBackup'].get('sql_debug','0'))
-       # except KeyError:
-       #     self.user = "0"
-       # try:
         self.dated_dir = to_bool(self.generator.skin_dict['MySQLBackup'].get('mysql_dated_dir', True))
         self.gen_report = to_bool(self.generator.skin_dict['MySQLBackup'].get('mysql_gen_report', True))
+        # local debug switch
+        self.sql_debug = int(self.generator.skin_dict['MySQLBackup'].get('sql_debug','0'))
 
         t1 = time.time() # this process's start time
 
@@ -135,6 +104,8 @@ class MySQLBackup(SearchList):
         this_host = os.uname()[1]
         file_stamp = time.strftime("%Y%m%d%H%M")
 
+        # add 900 seconds to ensure data ovelaps between runs.
+        self.tp_eriod = int(self.tp_eriod) + int('900')
         past_time = int(time.time()) - int(self.tp_eriod)  # then for the dump process
         #https://stackoverflow.com/questions/3682748/converting-unix-timestamp-string-to-readable-date-in-python
         readable_time = (datetime.fromtimestamp(past_time).strftime('%Y-%m-%d %H:%M:%S'))
