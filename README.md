@@ -27,9 +27,6 @@ Sqlite databases can be effectively backed up by simply copying them, if you wan
 **sudo /etc/init.d/weewx start**
 
 
-
-
-
 To use this backup method effectively, you need to dump (backup) your main weewx database first. We can then add these files, to that database.
 You can do this manually by invoking mysqldump from the command line, similar to the following.
 
@@ -92,8 +89,9 @@ UNIQUE KEY `dateTime` (`dateTime`)
  -- WHERE:dateTime>1497622847
  ```
  
- Everything above is the **header** (we need that only once)
- Below are the actual **INSERT** statements (as many as cover the time we need to restore)
+ Everything above is the **header** (we need that only once).
+ 
+ Below are the actual **INSERT** statements (as many that cover the time we need to restore, so will gather those together in a clump - so keep reading...)
 
 ```INSERT INTO archive VALUES (1497622860,17,1,1025.077,970.031046132267,1023.07394604233,2.86341264282514,21.351575,4.703125,36.0077,100,0.937546883483462,78.16020796314,1.05551635888867,78.5858585858586,0,0,4.703125,4.703125,4.703125,0.000408665001435199,1,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,0,0,NULL,NULL,NULL,NULL,4.95,4.95,4.95,4.93,NULL,20227104,NULL,404,556);
 INSERT INTO archive VALUES (1497622920,17,1,1025.077,970.056190971907,1023.10020511329,3.01429914403898,21.320325,4.734375,36.0083,100,0.775430162444809,77.9557099825767,0.931337963725294,77.7777777777778,0,0,4.734375,4.734375,4.734375,0.000409593627050564,17.220975,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,0,0,NULL,NULL,NULL,NULL,4.9525,4.95,4.95,4.93,NULL,20227104,NULL,404,556);
@@ -102,7 +100,8 @@ INSERT INTO archive VALUES (1497622980,17,1,1025.077,970.021751502796,1023.06423
 ```
 
 The **INSERT** statements finish
-and we continue below with the **footer** (which are also only needed once)
+
+And we continue below with the **footer** (which is only needed once)
 
 ```/*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
 /*!40101 SET SQL_MODE=@OLD_SQL_MODE */;
@@ -122,9 +121,12 @@ To add data from another of these files, you need to do some editing.
 If you want to use more than one file...
 
 We need:-
+
 1 only header
+
 1 only footer
-As many INSERT INTO statements as required.
+
+but as many *INSERT INTO* statements as are required for the database update.
 
 
     mkdir /tmp/dump-work
