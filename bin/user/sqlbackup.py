@@ -25,7 +25,7 @@ from weewx.cheetahgenerator import SearchList
 from weeutil.weeutil import to_bool
 
 
-class MySQLBackup(SearchList):
+class SqlBackup(SearchList):
     """ Notes and WARNINGS
 
     DON'T back the whole database up with this skin. You'll overload weewx and weird
@@ -76,27 +76,43 @@ class MySQLBackup(SearchList):
         @daily, @weekly, @monthly, etc
         """
         # essentials specific to weewx, should be able to get some of them directly from weewx.conf?
-        self.user = self.generator.skin_dict['MySQLBackup'].get('mysql_user','weewx')
-        self.host = self.generator.skin_dict['MySQLBackup'].get('mysql_host','localhost')
-        self.passwd = self.generator.skin_dict['MySQLBackup'].get('mysql_pass','weewx')
-        self.dbase = self.generator.skin_dict['MySQLBackup'].get('mysql_database','weewx')
-        self.table = self.generator.skin_dict['MySQLBackup'].get('mysql_table','')
-        self.bup_dir = self.generator.skin_dict['MySQLBackup'].get('mysql_bup_dir','/var/backups')
-        self.tp_eriod = self.generator.skin_dict['MySQLBackup'].get('mysql_tp_eriod','86400')
-        self.tp_label = self.generator.skin_dict['MySQLBackup'].get('mysql_tp_label','daily')
-        self.html_root = self.generator.skin_dict['MySQLBackup'].get('html_root','/var/www/html/weewx')
-        self.dated_dir = to_bool(self.generator.skin_dict['MySQLBackup'].get('mysql_dated_dir', True))
-        self.gen_report = to_bool(self.generator.skin_dict['MySQLBackup'].get('mysql_gen_report', True))
+        self.user = self.generator.skin_dict['SqlBackup'].get('mysql_user','weewx')
+        self.host = self.generator.skin_dict['SqlBackup'].get('mysql_host','localhost')
+        self.passwd = self.generator.skin_dict['SqlBackup'].get('mysql_pass','weewx')
+        self.d_base = self.generator.skin_dict['SqlBackup'].get('mysql_database','weewx')
+        self.table = self.generator.skin_dict['SqlBackup'].get('mysql_table','')
+        self.bup_dir = self.generator.skin_dict['SqlBackup'].get('mysql_bup_dir','/var/backups')
+        self.tp_eriod = self.generator.skin_dict['SqlBackup'].get('mysql_tp_eriod','86400')
+        self.tp_label = self.generator.skin_dict['SqlBackup'].get('mysql_tp_label','daily')
+        self.html_root = self.generator.skin_dict['SqlBackup'].get('html_root','/var/www/html/weewx')
+        self.dated_dir = to_bool(self.generator.skin_dict['SqlBackup'].get('mysql_dated_dir', True))
+        self.gen_report = to_bool(self.generator.skin_dict['SqlBackup'].get('mysql_gen_report', True))
         # local debug switch
-        self.sql_debug = int(self.generator.skin_dict['MySQLBackup'].get('sql_debug','0'))
+        self.sql_debug = int(self.generator.skin_dict['SqlBackup'].get('sql_debug','0'))
 
         t1 = time.time() # this process's start time
+
+        self.dbase = self.d_base.split()
+        dbase_len = len(self.dbase)
+        if self.sql_debug >= 3:
+            syslog.syslog(syslog.LOG_DEBUG, "sqlbackup:DEBUG: dbase string length: %s" % dbase_len)
+        if src_len > 1:
+            if self.sql_debug >= 3:
+                syslog.syslog(syslog.LOG_DEBUG, "original dbase string: %s" % self.d_base)
+                syslog.syslog(syslog.LOG_DEBUG, "dbase string length: %s and dbases %s" % dbase_len, self.dbase)
+            for step in range(dbase_len):
+                # we don't want to force os.sep if we have multiple dirs use them as entered
+                #if src_dir[step].endswith(os.sep):
+                multi_dbase = dbase_dir[step]
+                if self.sql_debug >= 2:
+                    syslog.syslog(syslog.LOG_DEBUG, "multi_loc = %s" % multi_dbase)
+                #cmd.extend([multi_dbase])
 
         # Because we use the  "--where..." clause, we run into trouble when dumping all tables so we use "--ignore..."
         # to prevent an incomplete dump - because there is no dateTime in the metadata table.
         if len(self.table) < 1:
             self.ignore = "--ignore-table=%s.archive_day__metadata" % self.dbase
-            syslog.syslog(syslog.LOG_INFO, "mysqlbackup:DEBUG: ALL tables specified, including option %s" % self.ignore)
+            syslog.syslog(syslog.LOG_INFO, "sqlbackup:DEBUG: ALL tables specified, including option %s" % self.ignore)
         else:
             self.ignore = ""
 
@@ -110,7 +126,7 @@ class MySQLBackup(SearchList):
         #https://stackoverflow.com/questions/3682748/converting-unix-timestamp-string-to-readable-date-in-python
         readable_time = (datetime.fromtimestamp(past_time).strftime('%Y-%m-%d %H:%M:%S'))
         if weewx.debug >= 2 or self.sql_debug >= 2:
-            syslog.syslog(syslog.LOG_INFO, "mysqlbackup:DEBUG: mysqldump is starting from %s" % readable_time)
+            syslog.syslog(syslog.LOG_INFO, "sqlbackup:DEBUG: mysqldump is starting from %s" % readable_time)
         # If true, create the remote directory with a date structure
         # eg: <path to backup directory>/2017/02/12/var/lib/weewx...
         if self.dated_dir:
@@ -123,7 +139,7 @@ class MySQLBackup(SearchList):
         if not os.path.exists(dump_dir):
             os.makedirs(dump_dir)
         if weewx.debug >= 2 or self.sql_debug >= 2:
-            syslog.syslog(syslog.LOG_INFO, "mysqlbackup:DEBUG: directory used to store mysqldump file - %s" % dump_dir)
+            syslog.syslog(syslog.LOG_INFO, "sqlbackup:DEBUG: directory used to store mysqldump file - %s" % dump_dir)
 
         dump_file = dump_dir + "/%s-host.%s-%s-%s.gz"  % (self.dbase, this_host, file_stamp, self.tp_label)
        # cmd = "/usr/bin/mysqldump -u%s -p%s -h%s -q  %s %s -w\"dateTime>%s\" %s -R --triggers --single-transaction --skip-opt" %(
@@ -141,7 +157,7 @@ class MySQLBackup(SearchList):
           #  cmd = "/usr/bin/mysqldump -u%s -p%s -h%s -q  %s %s -w\"dateTime>%s\" %s -R --triggers --single-transaction --skip-opt" %(
             cmd = "/usr/bin/mysqldump -u%s -p%s -h%s -q  %s %s -w\"dateTime>%s\" %s --single-transaction --skip-opt" %(
                 self.user, self.passwd, self.host, self.dbase, self.table, past_time, self.ignore)
-            syslog.syslog(syslog.LOG_INFO, "mysqlbackup:DEBUG: command used was %s" % (cmd))
+            syslog.syslog(syslog.LOG_INFO, "sqlbackup:DEBUG: command used was %s" % (cmd))
 
         if self.gen_report:
             # Output for a report using templates
@@ -175,15 +191,15 @@ class MySQLBackup(SearchList):
             os.system("mount > %s" % mount_file)
             if weewx.debug >= 2 or self.sql_debug >= 2 :
                 t4= time.time() 
-                syslog.syslog(syslog.LOG_INFO, "mysqlbackup:DEBUG: Created %s in %.2f secs" % (inc_file, t4-t3))
+                syslog.syslog(syslog.LOG_INFO, "sqlbackup:DEBUG: Created %s in %.2f secs" % (inc_file, t4-t3))
 
 
         # and then the whole process's finishing time
         t2= time.time()
         if weewx.debug >= 2 or self.sql_debug >= 2 :
-            syslog.syslog(syslog.LOG_INFO, "mysqlbackup:DEBUG: Created %s backup in %.2f seconds" % (dump_file, t2-t1))
+            syslog.syslog(syslog.LOG_INFO, "sqlbackup:DEBUG: Created %s backup in %.2f seconds" % (dump_file, t2-t1))
         else:
-            syslog.syslog(syslog.LOG_INFO, "mysqlbackup: Created backup in %.2f seconds" % (t2-t1))
+            syslog.syslog(syslog.LOG_INFO, "sqlbackup: Created backup in %.2f seconds" % (t2-t1))
 
 # date -d "11-june-2017 21:00:00" +'%s'
 # 1497178800
