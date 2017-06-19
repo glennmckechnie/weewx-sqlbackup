@@ -118,7 +118,7 @@ These files are one-shot only - unless we modify them.
 
 To add data from another of these files, you need to do some editing.
 
-If you want to use more than one file...
+## SO, If you want to use more than one file...
 
 We need:-
 
@@ -128,6 +128,7 @@ We need:-
 
 but as many *INSERT INTO* statements as are required for the database update.
 
+For example, if we were to do the following, we'd have success.
 
     mkdir /tmp/dump-work
     cd /tmp/dump-work
@@ -153,7 +154,7 @@ with these, we only want the INSERT INTO instructions - delete the header and fo
 
     sort -u 1 1a 2 3 > 11a23
 
-Remove duplicate lines and create a file containing all the INSERT statements that we want.
+Use **sort** to remove duplicate lines and create one file containing all the INSERT statements that we want.
 
     cat header  > new_file
     cat 11a23 >> new_file
@@ -168,12 +169,12 @@ Create the database
 
     mysql -u root -p dumptestnew < new_file
 
-Insert our new file into it
+Insert our new file into it and we should have a database with all that we require.
 
     mysqldump -u root -p -q --single-transaction --skip-opt dumptestnew > dumptestnew-compare
     vim -d new_file dumptestnew-compare
 
-If you want to, dump that and compare it to what we restored from new_file
+If you want to, dump that and compare it to what we restored from new_file. They should be the same, where it matters!
 
 
 That's an outline of the process. Names will obviously be changed to suit
