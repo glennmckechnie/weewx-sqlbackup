@@ -135,49 +135,48 @@ For example, if we were to do the following, we'd have success.
     cp our_partial_backups to_here
     gunzip *
 
-That's the groundwork, we should now be ready to start...
+That's the groundwork, we should now be ready to start.
+Create some duplicate files
+Edit these *header* and *footer* files to contain only those fields (we don't want any INSERT INTO instructions)
+header = everything above the first INSERT INTO statement
+footer = everything below the last INSERT INTO statement
 
     cp weatherpi-host.masterofpis-201706150020-24hours header
     cp weatherpi-host.masterofpis-201706150020-24hours footer
 
-Edit the header and footer files to contain only those fields (we don't want any INSERT INTO instructions)
-header = everything above the first INSERT INTO statement
-footer = everything below the last INSERT INTO statement
-
+we now need our data. Duplicate the required files and edit the result. With these, we only want the **INSERT INTO** instructions, that's all the middle data or the bulk of the file. 
+Delete the header and footers within these files.
 
     cp weatherpi-host.masterofpis-201706150020-24hours 1
     cp weatherpi-host.masterofpis-201706151033-24hours.gz 1a
     cp weatherpi-host.masterofpis-201706170020-24hours-middle 2
     cp weatherpi-host.masterofpis-201706190021-daily 3
-
-with these, we only want the INSERT INTO instructions - delete the header and footers within these files.
+    
+Using these modified files we use **sort** to remove duplicate lines and create one compact file containing all the INSERT statements that we want.
 
     sort -u 1 1a 2 3 > 11a23
-
-Use **sort** to remove duplicate lines and create one file containing all the INSERT statements that we want.
+    
+We now create a new file with a header, all the INSERT's we require, plus the footer. We're back to the start, but bigger and better.
 
     cat header  > new_file
     cat 11a23 >> new_file
     cat footer >> new_file
 
-We create a new file with a header, all the INSERT's we require, plus the footer
+Create the database
 
     mysql -u root -p
     create database dumpnewtest;
 
-Create the database
+Insert our new file into it and we should have a database with all that we require.
 
     mysql -u root -p dumptestnew < new_file
 
-Insert our new file into it and we should have a database with all that we require.
+And if you want to, dump that and compare it to what we restored from the new_file. They should be the same, where it matters!
 
     mysqldump -u root -p -q --single-transaction --skip-opt dumptestnew > dumptestnew-compare
     vim -d new_file dumptestnew-compare
 
-If you want to, dump that and compare it to what we restored from new_file. They should be the same, where it matters!
-
-
-That's an outline of the process. Names will obviously be changed to suit
+That's an outline of the process. Names have obviously been changed to suit.
 
 
 ## Notes and WARNINGS (Again! and from skin.conf)
