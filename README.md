@@ -35,13 +35,13 @@ You can do this manually by invoking mysqldump from the command line, similar to
 
 Get the epoch date string to use in the filename
 
-   date +%s
-   
-   #1497830683
+    date +%s   
+    1497830683
 
 dump the data into a suitable file(name)
 
-    mysqldump -uweewx -p -hlocalhostweatherpi archive--single-transaction --skip-opt | gzip > /i{your_backup_directory}/wholebackup-1497830683.sql
+    mysqldump -uweewx -p -hlocalhostweatherpi archive--single-transaction --skip-opt | 
+            gzip > /{your_backup_directory}/wholebackup-1497830683.sql
 
 Adding the epoch date string to the filename helps in determing its current age, when to do update from. You'll then use the partial backups created by this skin, to restore from that date.
 
