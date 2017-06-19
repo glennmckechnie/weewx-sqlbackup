@@ -17,7 +17,6 @@
   </head>
 
   <body onload="setup();">
-    #include "../Standard2/titlebar.inc"
     <div id="contents">
       <p><a href="index.html">&#10096; Current Conditions</a></p> 
         <div>
@@ -57,19 +56,11 @@
     </div>
 
     <p class="footnote">
-      This station uses an $station.hardware to collect data from various one-wire sensors
-      that are connected to a <a href="https://www.raspberrypi.org/help/faqs/">raspberry Pi 2</a>
-      micro computer.<br>
+      This station uses an $station.hardware to generate data.
       This data is then collected and displayed by <a href="http://weewx.com/">weeWX</a>, an
       experimental weather software system written in Python.<br>
-      This raspberry pi runs with <a href="https://github.com/glennmckechnie/rorpi-raspberrypi"> a read only filesystem</a>
-    </p>
-    <p class="footnote">
-     Radar, satellite, and rain images are courtesy of the Australian Government Bureau of Meteorology, 2017.<br>
-     Fire rating image is courtesy of CFA Victoria, 2017
     </p>
 
-    #include "../Standard2/analytics.inc"
 
 </body>
 
