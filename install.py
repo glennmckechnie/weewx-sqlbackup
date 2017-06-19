@@ -22,6 +22,7 @@ class MySQLBackupInstaller(ExtensionInstaller):
                         'skin': 'mysqlbackup'}}},
             files=[('bin/user', ['bin/user/mysqlbackup.py']),
                    ('skins/mysqlbackup', ['skins/mysqlbackup/skin.conf',
-		    'skins/mysqlbackup/mysqlbackup.html.tmpl'])
+                    'skins/mysqlbackup/mysqlbackup.html.tmpl',
+                    'skins/mysqlbackup/mysqlbackup.inc'])
                   ]
         )

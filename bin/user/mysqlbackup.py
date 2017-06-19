@@ -162,7 +162,7 @@ class MySQLBackup(SearchList):
             os.makedirs(tmp_inc_dir)
             gen_time = time.strftime("%A %B %d, %Y at %H:%M")
             os.system("echo %s > %s " % (gen_time, stamp_file))
-            os.system("echo '</b>, starting its capture from <b>%s.\n' >> %s " % (readable_time, stamp_file))
+            os.system("echo '</b></br>It started the capture from <b>%s.\n' >> %s " % (readable_time, stamp_file))
             #os.system("echo '<br>%s\n' >> %s " % (cmd, stamp_file))
             os.system("echo '%s\n' > %s " % (cmd, head_file))
             # broken pipe error from wee_reports appears harmless & is due to head truncating the operation.
