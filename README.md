@@ -12,7 +12,7 @@ Sqlite databases can be effectively backed up by simply copying them, if you wan
 
 1 run the installer:
 
-**wee_extension --install master.zip**
+**wee_extension --install weewx-mysqlbackup-master.zip**
 
 2 edit the skin.conf file to suit your installation
 
