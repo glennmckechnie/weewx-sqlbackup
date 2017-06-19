@@ -1,3 +1,5 @@
+
+
 This weewx skin (SLE) calls mysqldump and instructs it to dump data from the weewx database, for a predetermined timeframe.
 It will do this at regular intervals, as specified by the report_timing feature of weewx (see the weewx docs)
 
@@ -5,6 +7,25 @@ This is not intended to be used to dump the whole database, or even a large port
 
 This skin is only configured for MySQL (MariaDB) databases.
 Sqlite databases can be effectively backed up by simply copying them, if you want a similar 'skinned' approach to this then have a look at 'Using the RSYNC skin as a backup solution' https://github.com/weewx/weewx/wiki/Using-the-RSYNC-skin-as-a-backup-solutionThat approach also aims to create a backup during a quite window of time (no database writes) available within the weewx cycle.
+
+===============================================================================
+Installation
+
+1) run the installer:
+
+wee_extension --install master.zip
+
+2) edit the skin.conf file to suit your installation
+ a) select a suitable report_timing stanza
+ b) select a suitable archive period
+
+3) restart weewx:
+
+sudo /etc/init.d/weewx stop
+sudo /etc/init.d/weewx start
+
+
+===============================================================================
 
 
 To use this backup method effectively, you need to dump (backup) your main weewx database first.
