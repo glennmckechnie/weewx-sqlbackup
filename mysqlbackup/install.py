@@ -8,17 +8,20 @@ from setup import ExtensionInstaller
 def loader():
     return MySQLBackupInstaller()
 
-class InfluxInstaller(ExtensionInstaller):
+class MySQLBackupInstaller(ExtensionInstaller):
     def __init__(self):
         super(MySQLBackupInstaller, self).__init__(
-            version="0.5",
+            version="0.2",
             name='MySQLBackup',
-            description='Partial backup of the MySQL weewx database',
+            description='Use mysqldump to create Partial backups of the MySQL weewx database',
             author="Glenn McKechnie",
             author_email="glenn.mckechnie@gmail.com",
             config={
                 'StdReport': {
                     'MySQLBackup': {
-                        'skin': 'mysqlbackup',
-            files=[('bin/user', ['bin/user/mysqlbackup.py'])]
-            )
+                        'skin': 'mysqlbackup'}}},
+            files=[('bin/user', ['bin/user/mysqlbackup.py']),
+                   ('skins/mysqlbackup', ['skins/mysqlbackup/skin.conf',
+		    'skins/mysqlbackup/mysqlbackup.html.tmpl'])
+                  ]
+        )
