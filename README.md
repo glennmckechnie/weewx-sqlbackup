@@ -37,7 +37,7 @@ Get the epoch date string to use in the filename
 
 dump the data into a suitable file(name)
 
-    mysqldump -uweewx -p -hlocalhost weatherpi archive--single-transaction --skip-opt | 
+    mysqldump -uweewx -p -hlocalhost weatherpi archive --single-transaction --skip-opt | 
             gzip > /{your_backup_directory}/wholebackup-1497830683.sql
 
 Adding the epoch date string to the filename helps in determing its current age, when to do update from. You'll then use the partial backups created by this skin, to restore from that date.
