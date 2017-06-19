@@ -6,7 +6,7 @@ It will do this at regular intervals, as specified by the report_timing feature 
 This is not intended to be used to dump the whole database, or even a large portion of it. If you do that it can seriously overload weewx and weird and bizarre things will start to happen within weewx - ie: report generation, data collection, archiving can all be disrupted.
 
 This skin is only configured for MySQL (MariaDB) databases.
-Sqlite databases can be effectively backed up by simply copying them, if you want a similar 'skinned' approach to this then have a look at 'Using the RSYNC skin as a backup solution' https://github.com/weewx/weewx/wiki/Using-the-RSYNC-skin-as-a-backup-solution That approach also aims to create a backup during a quite window of time (no database writes) available within the weewx cycle.
+Sqlite databases can be effectively backed up by simply copying them, if you want a similar 'skinned' approach to this then have a look at [Using the RSYNC skin as a backup solution.](https://github.com/weewx/weewx/wiki/Using-the-RSYNC-skin-as-a-backup-solution) That approach also aims to create a backup during a quite window of time (no database writes) available within the weewx cycle.
 
 ### Installation
 
