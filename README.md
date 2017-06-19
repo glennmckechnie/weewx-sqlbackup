@@ -6,25 +6,25 @@ It will do this at regular intervals, as specified by the report_timing feature 
 This is not intended to be used to dump the whole database, or even a large portion of it. If you do that it can seriously overload weewx and weird and bizarre things will start to happen within weewx - ie: report generation, data collection, archiving can all be disrupted.
 
 This skin is only configured for MySQL (MariaDB) databases.
-Sqlite databases can be effectively backed up by simply copying them, if you want a similar 'skinned' approach to this then have a look at 'Using the RSYNC skin as a backup solution' https://github.com/weewx/weewx/wiki/Using-the-RSYNC-skin-as-a-backup-solutionThat approach also aims to create a backup during a quite window of time (no database writes) available within the weewx cycle.
+Sqlite databases can be effectively backed up by simply copying them, if you want a similar 'skinned' approach to this then have a look at 'Using the RSYNC skin as a backup solution' https://github.com/weewx/weewx/wiki/Using-the-RSYNC-skin-as-a-backup-solution That approach also aims to create a backup during a quite window of time (no database writes) available within the weewx cycle.
 
-Installation
+### Installation
 
-1) run the installer:
+1 run the installer:
 
-wee_extension --install master.zip
+**wee_extension --install master.zip**
 
-2) edit the skin.conf file to suit your installation
+2 edit the skin.conf file to suit your installation
 
-   a) select a suitable report_timing stanza
+   * select a suitable *report_timing* stanza
  
-   b) select a suitable archive period
+   * select a suitable archive period
 
-3) restart weewx:
+3 restart weewx:
 
-sudo /etc/init.d/weewx stop
+**sudo /etc/init.d/weewx stop**
 
-sudo /etc/init.d/weewx start
+**sudo /etc/init.d/weewx start**
 
 
 
@@ -35,12 +35,13 @@ You can do this manually by invoking mysqldump from the command line, similar to
 
 Get the epoch date string to use in the filename
 
-```date +%s
-1497830683```
+   date +%s
+   
+   #1497830683
 
 dump the data into a suitable file(name)
 
-```mysqldump -uweewx -p -hlocalhostweatherpi archive--single-transaction --skip-opt | gzip > /i{your_backup_directory}/wholebackup-1497830683.sql```
+    mysqldump -uweewx -p -hlocalhostweatherpi archive--single-transaction --skip-opt | gzip > /i{your_backup_directory}/wholebackup-1497830683.sql
 
 Adding the epoch date string to the filename helps in determing its current age, when to do update from. You'll then use the partial backups created by this skin, to restore from that date.
 
@@ -171,7 +172,7 @@ If you want to, dump that and compare it to what we restored from new_file
 That's an outline of the process. Names will obviously be changed to suit
 
 
-## Notes and WARNINGS
+## Notes and WARNINGS (Again! and from skin.conf)
 
 DON'T back the whole database up with this skin. You'll overload weewx and weird
 things will happen.
@@ -209,4 +210,4 @@ Testing: Backup your mysql database first - via other methods.
 Modify your variables, and turn on debug in the skin.conf file
 Then copy and modify a minimal weewx.conf file as weewx.wee.conf and invoke it by using.
 
-wee_reports /etc/weewx/weewx.wee.conf && tail -n20 /var/log/syslog | grep wee_report
+    wee_reports /etc/weewx/weewx.wee.conf && tail -n20 /var/log/syslog | grep wee_report
