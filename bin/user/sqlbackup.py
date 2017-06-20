@@ -240,7 +240,7 @@ class SqlBackup(SearchList):
             all_file = "%s/alldumps.inc" % inc_dir
             head_file = "%s/head.inc" % inc_dir
             tail_file = "%s/tail.inc" % inc_dir
-
+            #stamp_file = "%s/timestamp.inc" % inc_dir
 
             next_index = ('%s.<a href="#%s">%s</a>&nbsp;&nbsp;' % (sql_name, data_base, data_base))
             link_index = carry_index + next_index
@@ -249,10 +249,16 @@ class SqlBackup(SearchList):
             if not os.path.exists(inc_dir):
                 os.makedirs(inc_dir)
             gen_time = time.strftime("%A %B %d, %Y at %H:%M")
+
+            #os.system("echo %s > %s " % (gen_time, stamp_file))
+            #os.system("echo '</b></br>It started the capture from <b>%s.\n' >> %s " % (readable_time, stamp_file))
+
             head = open(head_file, 'w')
-            head.write("This page shows a summary of the output from the"
-                        "sqlbackup that last ran on <b> %s </b><br>\nIt "
-                        "started the capture from <b>%s</b>\n" % (
+            #head.write("This page shows a summary of the output from the"
+            #            "sqlbackup that last ran on <b> %s </b><br>\nIt "
+            #            "started the capture from <b>%s</b>\n" % (
+            #            gen_time, readable_time))
+            head.write("<b> %s </b><br>\nIt started the capture from <b>%s</b>\n" % (
                         gen_time, readable_time))
             head.close()
 

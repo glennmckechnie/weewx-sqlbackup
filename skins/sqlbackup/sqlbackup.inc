@@ -16,7 +16,7 @@
     <tr>
        <td class="label">
        &nbsp;Last run was on <b>
-        "/tmp/inc/timestamp.inc"
+        "/tmp/sqlbackup/head.inc"
        </b>
      </td>
     </tr>
