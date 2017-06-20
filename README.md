@@ -5,8 +5,9 @@ It will do this at regular intervals, as specified by the report_timing feature 
 
 This is not intended to be used to dump the whole database, or even a large portion of it. If you do that it can seriously overload weewx and weird and bizarre things will start to happen within weewx - ie: report generation, data collection, archiving can all be disrupted.
 
-This skin is only configured for MySQL (MariaDB) databases.
-Sqlite databases can be effectively backed up by simply copying them, if you want a similar 'skinned' approach to this then have a look at [Using the RSYNC skin as a backup solution.](https://github.com/weewx/weewx/wiki/Using-the-RSYNC-skin-as-a-backup-solution) That approach also aims to create a backup during a quite window of time (no database writes) available within the weewx cycle.
+This skin was originally  configured for MySQL (MariaDB) databases. It has since grown to incorporate sqlite databases (except it captures the whole database).
+Sqlite databases can also be backed up by simply copying them, if you want a similar 'skinned' approach that does it by copying then have a look at [Using the RSYNC skin as a backup solution.](https://github.com/weewx/weewx/wiki/Using-the-RSYNC-skin-as-a-backup-solution) 
+Both these methods aim to create a backup during a quite window of time (no database writes) available within the weewx cycle.
 
 ### Installation
 
@@ -27,6 +28,8 @@ Sqlite databases can be effectively backed up by simply copying them, if you wan
 **sudo /etc/init.d/weewx start**
 
 
+#### Notes for MySQL (MariaDB) database
+
 To use this backup method effectively, you need to dump (backup) your main weewx database first. We can then add these files, to that database.
 You can do this manually by invoking mysqldump from the command line, similar to the following.
 
@@ -41,6 +44,8 @@ dump the data into a suitable file(name)
             gzip > /{your_backup_directory}/wholebackup-1497830683.sql
 
 Adding the epoch date string to the filename helps in determing its current age, when to do update from. You'll then use the partial backups created by this skin, to restore from that date.
+
+When configuring your sqlbackup, DO turn on sql_debug in the skin.conf file and view the output in /var/log/syslog (or your default log.) Pay particular attention to the times returned in the DEBUG lines.
 
 The partial dumps created by this skin have a header, which includes the CREATE TABLE statement - a lot of INSERT statements and a footer.
 
@@ -177,6 +182,34 @@ And if you want to, dump that and compare it to what we restored from the new_fi
     vim -d new_file dumptestnew-compare
 
 That's an outline of the process. Names have obviously been changed to suit.
+
+#### Notes for sqlite (.sdb) databases
+
+The dumps that this skin creates are a backup of the whole database.
+
+The process to dump an sqlite databases happens a lot quicker than the mysqldump process. This doesn't mean that you've got all the time required to do it cleanly, from within weewx; but it's worth a try before you use another method (one of which is outlined above, on the weewx/wiki)
+
+When configuring your sqlbackup, DO turn on sql_debug in the skin.conf file and view the output in /var/log/syslog (or your default log.) Pay particular attention to the times returned in the DEBUG lines.
+
+To restore it...
+
+    gunzip pmon-host.masterofpis-201706210841-daily.gz
+
+    sqlite3 pmon.sdb < pmon-host.masterofpis-201706210841-daily
+
+check it using sqlite3...
+
+    09:21 AM $ sqlite3 pmon.sdb
+    SQLite version 3.8.7.1 2014-10-29 13:59:56
+    Enter ".help" for usage hints.
+    sqlite> pragma integrity_check;
+    ok
+    sqlite> .quit
+
+or
+
+    09:22 AM $ echo 'pragma integrity_check;' | sqlite3 pmon.sdb
+    ok
 
 
 ## Notes and WARNINGS (Again! and from skin.conf)
