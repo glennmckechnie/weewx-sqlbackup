@@ -16,7 +16,7 @@
     <tr>
        <td class="label">
        &nbsp;Last run was on <b>
-       #include "/tmp/inc/timestamp.inc"
+        "/tmp/inc/timestamp.inc"
        </b>
      </td>
     </tr>
