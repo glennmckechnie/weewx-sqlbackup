@@ -3,13 +3,13 @@
 ## See LICENSE.txt for your rights
 #errorCatcher Echo
 
-<div id='mysqlbackup_widget' class="widget">
+<div id='sqlbackup_widget' class="widget">
   <div class="widget_title">
     <a class="widget_control_left"
-      onclick="toggle_widget('mysqlbackup')">&diams;</a>
-    <a  href="mysqlbackup.html">MySQLBackup</a>
+      onclick="toggle_widget('sqlbackup')">&diams;</a>
+    <a  href="sqlbackup.html">MySQLBackup</a>
     <a class="widget_control"
-      onclick="toggle_widget('mysqlbackup')">&diams;</a>
+      onclick="toggle_widget('sqlbackup')">&diams;</a>
   </div>
   <div class="widget_contents">
   <table><tbody>
