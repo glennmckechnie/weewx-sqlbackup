@@ -120,13 +120,10 @@ class SqlBackup(SearchList):
 
         t1 = time.time() # this process's start time
 
-        # Sigh, we need these files to exist, with some content or Cheetah complains
-        # Doing this, now rather than at the finish to allow file inspection
-        # so, empty them all 
+        # Do the housework first, we clean out all the *.inc 's now rather than later. It allows their content to be
+        # inspected between runs.
         if os.path.exists(self.inc_dir):
             shutil.rmtree(self.inc_dir)
-
-        # and re-create \n empties
         if not os.path.exists(self.inc_dir):
             os.makedirs(self.inc_dir)
 
@@ -135,18 +132,6 @@ class SqlBackup(SearchList):
         tail_file = "%s/tail.inc" % (self.inc_dir)
         links_file = "%s/links.inc" % self.inc_dir
 
-        empty = open(all_file, 'w')
-        empty.write("\n")
-        empty.close()
-        empty = open(head_file, 'w')
-        empty.write("\n")
-        empty.close()
-        empty = open(tail_file, 'w')
-        empty.write("\n")
-        empty.close()
-        empty = open(links_file, 'w')
-        empty.write("\n")
-        empty.close()
        # sys.exit()
         # Because we use the  "--where..." clause, we run into trouble when dumping all tables so we use "--ignore..."
         # to prevent an incomplete dump - because there is no dateTime in the metadata table.
@@ -278,23 +263,44 @@ class SqlBackup(SearchList):
             tail.write("</pre>")
             tail.close()
 
+            # add debug extras to sqlbackup.html
             if self.sql_debug >= 4 :
                 tail = open(tail_file, 'a')
-                tail.write('</pre><hr>\n<a id="debug"></a><a href="#Top">Back to top'
-                           '</a><h2> DEBUG output: </h2>&nbsp;&nbsp;&nbsp;'
-                           '&nbsp;\n<pre>')
+                tail.write('</pre><hr>\n<h2> DEBUG output</h2>\n'
+                           '<a id="logs"></a><a href="#Top">Back to top</a>'
+                           '<h2> Log snippet: </h2>&nbsp;&nbsp;&nbsp;&nbsp;\n'
+                           '<pre>')
                 tail.close()
                 os.system("grep /var/log/syslog  -e sqlbackup | tail -n50 >> %s" % tail_file)
+
+                tail = open(tail_file, 'a')
+                tail.write('</pre><hr>\n<a id="mysql"></a><a href="#Top">Back to top</a>'
+                           '<h2>MySQL files: </h2>&nbsp;&nbsp;&nbsp;&nbsp;\n'
+                           '<pre>')
+                tail.close()
                 os.system("ls  -al %s | tail -n10 >> %s" % (mydump_dir, tail_file))
+
+                tail = open(tail_file, 'a')
+                tail.write('</pre><hr>\n<a id="sql"></a><a href="#Top">Back to top</a>'
+                           '<h2>sqlite files: </h2>&nbsp;&nbsp;&nbsp;&nbsp;\n'
+                           '<pre>')
+                tail.close()
                 os.system("ls  -al %s | tail -n10 >> %s" % (dump_dir, tail_file))
+
                 tail = open(tail_file, 'a')
                 tail.write('</pre>\n')
                 tail.close()
         else:
             all_file = "%s/alldumps.inc" % self.inc_dir
-            dissd = open(all_file, 'a')
-            dissd.write("<br>Report generation is disabled in skin.conf")
-            dissd.close()
+            miss = open(all_file, 'a')
+            miss.write("<p>Report generation is disabled in skin.conf</p>")
+            miss.close()
+            empty = open(tail_file, 'w')
+            empty.write("\n")
+            empty.close()
+            empty = open(links_file, 'w')
+            empty.write("\n")
+            empty.close()
 
 
         # and then the whole process's finishing time
@@ -336,16 +342,22 @@ class SqlBackup(SearchList):
 
             l_inks=open(links_file, 'w')
             if self.sql_debug >= 4 :
-                sys_index =('<br>&nbsp;&nbsp;&nbsp;<b>System ::</b>&nbsp;&nbsp;'
-                            '&nbsp;&nbsp;<a href="#disk">disks</a>&nbsp;-&nbsp;'
-                            '<a href="#memory">memory</a>&nbsp;-&nbsp;<a href='
-                            '"#mounts">mounts</a>&nbsp;-&nbsp;<a href="#debug"'
-                            '>DEBUG output</a><br>')
+                sys_index =('<br>&nbsp;&nbsp;&nbsp;<b>System ::</b>&nbsp;&nbsp;&nbsp;&nbsp;'
+                            '<a href="#disk">disks</a>&nbsp;-&nbsp;'
+                            '<a href="#memory">memory</a>&nbsp;-&nbsp;'
+                            '<a href="#mounts">mounts</a>&nbsp;&nbsp;'
+                            '<b>DEBUG output :: </b>'
+                            '<a href="#logs">logs</a>&nbsp;-&nbsp;'
+                            '<a href="#mysql">mysql</a>&nbsp;-&nbsp;'
+                            '<a href="#sql">sql</a>&nbsp;&nbsp;'
+                            '<br>')
             else:
-                sys_index =('<br>&nbsp;&nbsp;&nbsp;<b>System ::</b>&nbsp;&nbsp;'
-                            '&nbsp;&nbsp;<a href="#disk">disks</a>&nbsp;-&nbsp;'
-                            '<a href="#memory">memory</a>&nbsp;-&nbsp;<a href='
-                            '"#mounts">mounts</a>&nbsp;&nbsp;<br>')
+                sys_index =('<br>&nbsp;&nbsp;&nbsp;<b>System ::</b>&nbsp;&nbsp;&nbsp;&nbsp;'
+                            '<a href="#disk">disks</a>&nbsp;-&nbsp;'
+                            '<a href="#memory">memory</a>&nbsp;-&nbsp;'
+                            '<a href="#mounts">mounts</a>&nbsp;&nbsp;'
+                            '<br>')
+
             h_tml =[link_index, sys_index, "<hr>"]
             l_inks.writelines(h_tml)
             l_inks.close()

@@ -1,4 +1,4 @@
-
+## SQLBackup README
 
 This weewx skin (SLE) calls mysqldump and instructs it to dump data from the weewx database, for a predetermined timeframe.
 It will do this at regular intervals, as specified by the report_timing feature of weewx (see the weewx docs)
@@ -45,11 +45,13 @@ dump the data into a suitable file(name)
 
 Adding the epoch date string to the filename helps in determing its current age, when to do update from. You'll then use the partial backups created by this skin, to restore from that date.
 
-When configuring your sqlbackup, DO turn on sql_debug in the skin.conf file and view the output in /var/log/syslog (or your default log.) Pay particular attention to the times returned in the DEBUG lines.
+When configuring your sqlbackup, DO turn on sql_debug in the skin.conf file and view the output in /var/log/syslog (or your default log) or in the report page, sqlbackup.html 
+Pay particular attention to the times returned in the DEBUG lines.
 
 The partial dumps created by this skin have a header, which includes the CREATE TABLE statement - a lot of INSERT statements and a footer.
 
-```-- MySQL dump 10.13Distrib 5.5.55, for debian-linux-gnu (i686) 
+```
+-- MySQL dump 10.13Distrib 5.5.55, for debian-linux-gnu (i686) 
 -- 
 -- Host: localhostDatabase: weatherpi
 -- ------------------------------------------------------
@@ -98,7 +100,8 @@ UNIQUE KEY `dateTime` (`dateTime`)
  
  Below are the actual **INSERT** statements (as many that cover the time we need to restore, so we will gather those together in a clump, and keep reading...)
 
-```INSERT INTO archive VALUES (1497622860,17,1,1025.077,970.031046132267,1023.07394604233,2.86341264282514,21.351575,4.703125,36.0077,100,0.937546883483462,78.16020796314,1.05551635888867,78.5858585858586,0,0,4.703125,4.703125,4.703125,0.000408665001435199,1,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,0,0,NULL,NULL,NULL,NULL,4.95,4.95,4.95,4.93,NULL,20227104,NULL,404,556);
+```
+INSERT INTO archive VALUES (1497622860,17,1,1025.077,970.031046132267,1023.07394604233,2.86341264282514,21.351575,4.703125,36.0077,100,0.937546883483462,78.16020796314,1.05551635888867,78.5858585858586,0,0,4.703125,4.703125,4.703125,0.000408665001435199,1,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,0,0,NULL,NULL,NULL,NULL,4.95,4.95,4.95,4.93,NULL,20227104,NULL,404,556);
 INSERT INTO archive VALUES (1497622920,17,1,1025.077,970.056190971907,1023.10020511329,3.01429914403898,21.320325,4.734375,36.0083,100,0.775430162444809,77.9557099825767,0.931337963725294,77.7777777777778,0,0,4.734375,4.734375,4.734375,0.000409593627050564,17.220975,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,0,0,NULL,NULL,NULL,NULL,4.9525,4.95,4.95,4.93,NULL,20227104,NULL,404,556);
  [...]
 INSERT INTO archive VALUES (1497622980,17,1,1025.077,970.021751502796,1023.06423954295,3.02441428710914,21.3047,4.625,36.005275,100,0.574028000130207,78.0280725907076,0.711203535935679,78.5858585858586,0,0,4.625,4.625,4.625,0.000410737550744648,1,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,0,0,NULL,NULL,NULL,NULL,4.95,4.95,4.95,4.93,NULL,20227104,NULL,404,556);
@@ -108,7 +111,8 @@ The **INSERT** statements finish
 
 And we continue below with the **footer** (which is only needed once)
 
-```/*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
+```
+/*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
 /*!40101 SET SQL_MODE=@OLD_SQL_MODE */;
 /*!40014 SET FOREIGN_KEY_CHECKS=@OLD_FOREIGN_KEY_CHECKS */;
 /*!40014 SET UNIQUE_CHECKS=@OLD_UNIQUE_CHECKS */;
@@ -127,9 +131,9 @@ To add data from another of these files, you need to do some editing.
 
 We need:-
 
-1 only header
+one only header
 
-1 only footer
+one only footer
 
 but as many *INSERT INTO* statements as are required for the database update.
 
@@ -189,7 +193,8 @@ The dumps that this skin creates are a backup of the whole database.
 
 The process to dump an sqlite databases happens a lot quicker than the mysqldump process. This doesn't mean that you've got all the time required to do it cleanly, from within weewx; but it's worth a try before you use another method (one of which is outlined above, on the weewx/wiki)
 
-When configuring your sqlbackup, DO turn on sql_debug in the skin.conf file and view the output in /var/log/syslog (or your default log.) Pay particular attention to the times returned in the DEBUG lines.
+When configuring your sqlbackup, DO turn on sql_debug in the skin.conf file and view the output in /var/log/syslog (or your default log) or in the report page, sqlbackup.html .
+Pay particular attention to the times returned in the DEBUG lines.
 
 To restore it...
 
@@ -213,35 +218,39 @@ or
 
 ### Another view - Info from the scripts comments
 
-    """ Notes and WARNINGS
+
+    Notes and WARNINGS
 
     DON'T back the whole database up with this skin. You'll overload weewx and weird
-    things will happen.
+    things could? WILL! happen.
 
     The idea is to instead select a small rolling window from the database (if its a
     MySQL or  MariaDB) and dump this at each report_timing interval. We will use that
     as a partial backup.
-    If it's an sqlite dtabase, it will dump it (them) all.
     At restore time we'll then need to select some or all of the dump files, and stitch
     them together as appropriate.
 
+    If it's an sqlite dtabase, it will dump it (them) all.
+
     This skin was created to backup a mysql database that runs purely in memory, it has
     since evolved to include sqlite databases as well.
-    Because running a database is a little! fragile (to say the least mI configured my
+    Because running a database is a little! fragile (to say the least.) I configured my
     script to run every hour, and dumps the last 24 hours of the database to the
     xxsql_bup_file in the format...
          {database}-host.{hostname}-{epoch-timestamp}-{window-time-period}.gz
     eg:  weatherpi-host.masterofpis-201706132105-24hours.gz
 
     Those intervals are handled easily on my setup and do not interrupt the report
-    generation in weewx. Your processor, memory and database sizes will be different to
-    mine... YMWV
+    generation in weewx. Your processor, memory, database, archive interval will be
+    different to mine... YMWV
 
  Jun 13 21:05:42 masterofpis wee_reports[26062]: sqlbackup: Created backup in 0.31 seconds
 
     You'll need to adjust the values to suit you. Setting sql_debug = "2" in the skin.conf
-    will inform you while you make changes - look at the logs, or at the foot of the
-    sqlbackup.html page.
+    will inform you while you make changes, look at the logs.
+    Or, if you set sql_debug = "4" it will be included at the foot of the sqlbackup.html
+    page.
+
     This script currently performs no error checking so check the resulting files for
     integrity.
     disk full, it will return silence!
@@ -254,12 +263,13 @@ or
     we should slip under the radar.
     Keep it small and sensible and that should all remain true.
 
-    Testing: BACK UP your database first - via other methods. (Okay, I've used this script
-    by passing the current unix time·
+    Testing: BACK UP your database first - via other methods. (Okay, Truth is out. I've used
+    this script by passing the current unix time as the sql_tperiod and have lived to tell
+    the tale.)
     # date +"%s"
     # returns  current epoch time
     In short...
-    Open skin.conf, modify the variables, turn on sql_debug
+    Open skin.conf, modify the variables, turn on sql_debug - 2
 
     To help speed up the process, bypass the report_timing setting and cycle through the
     setup process quickly by copying and modifying a minimal weewx.conf file as weewx.wee.conf
@@ -271,4 +281,7 @@ or
     wee_reports /etc/weewx/weewx.wee.conf && tail -n20 /var/log/syslog | grep wee_report
 
     then watch your logs, or the sqlbackup.html page if you're generating the report.
-    """
+
+
+
+ pandoc README.md -f markdown_github > README.html

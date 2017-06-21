@@ -7,7 +7,7 @@
   <div class="widget_title">
     <a class="widget_control_left"
       onclick="toggle_widget('sqlbackup')">&diams;</a>
-    <a  href="sqlbackup.html">MySQLBackup</a>
+    <a  href="sqlbackup.html">SQLBackup</a>
     <a class="widget_control"
       onclick="toggle_widget('sqlbackup')">&diams;</a>
   </div>
@@ -15,9 +15,8 @@
   <table><tbody>
     <tr>
        <td class="label">
-       &nbsp;Last run was on <b>
-        "/tmp/sqlbackup/head.inc"
-       </b>
+       &nbsp;Last run was on
+        #include "/tmp/sqlbackup/head.inc"
      </td>
     </tr>
   </tbody></table>

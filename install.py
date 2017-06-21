@@ -14,7 +14,7 @@ class SqlBackupInstaller(ExtensionInstaller):
             version="0.3",
             name='sqlbackup',
             description='Use mysqldump or .dump to create partial backups of the '
-	                'mysql weewx database, or full backups of the sqlite databases',
+                        'mysql weewx database, or full backups of the sqlite databases',
             author="Glenn McKechnie",
             author_email="glenn.mckechnie@gmail.com",
             config={
@@ -25,6 +25,6 @@ class SqlBackupInstaller(ExtensionInstaller):
                    ('skins/sqlbackup', ['skins/sqlbackup/skin.conf',
                     'skins/sqlbackup/sqlbackup.html.tmpl',
                     'skins/sqlbackup/sqlbackup.inc',
-		    'skins/sqlbackup/README.md'])
+                    'skins/sqlbackup/sqlbackupREADME.html'])
                   ]
         )
