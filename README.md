@@ -35,7 +35,7 @@ You can do this manually by invoking mysqldump from the command line, similar to
 
 Get the epoch date string to use in the filename
 
-    date +%s   
+    date +%s
     1497830683
 
 dump the data into a suitable file(name)
@@ -240,7 +240,8 @@ or
  Jun 13 21:05:42 masterofpis wee_reports[26062]: sqlbackup: Created backup in 0.31 seconds
 
     You'll need to adjust the values to suit you. Setting sql_debug = "2" in the skin.conf
-    iwill help you while you do so.
+    will inform you while you make changes - look at the logs, or at the foot of the
+    sqlbackup.html page.
     This script currently performs no error checking so check the resulting files for
     integrity.
     disk full, it will return silence!
@@ -259,11 +260,15 @@ or
     # returns  current epoch time
     In short...
     Open skin.conf, modify the variables, turn on sql_debug
+
     To help speed up the process, bypass the report_timing setting and cycle through the
     setup process quickly by copying and modifying a minimal weewx.conf file as weewx.wee.conf
     and invoke that by using.
+    One hiccup with the wee_reports method is that it may return longer times if it encounters
+    a locked database. The ultimate test is when it's run under weewx's control, wee_reports
+    is still very useful to fine tune your setup
 
     wee_reports /etc/weewx/weewx.wee.conf && tail -n20 /var/log/syslog | grep wee_report
 
-    then watch your logs
-    """ 
+    then watch your logs, or the sqlbackup.html page if you're generating the report.
+    """

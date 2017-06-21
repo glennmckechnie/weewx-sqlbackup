@@ -16,7 +16,6 @@ import subprocess
 import syslog
 import time
 from datetime import datetime
-# https://stackoverflow.com/questions/3600948/python-subprocess-mysqldump-and-pipes
 
 import weewx.engine
 import weewx.manager
@@ -29,33 +28,34 @@ class SqlBackup(SearchList):
     """ Notes and WARNINGS
 
     DON'T back the whole database up with this skin. You'll overload weewx and weird
-    things will happen.
+    things could? WILL! happen.
 
     The idea is to instead select a small rolling window from the database (if its a
     MySQL or  MariaDB) and dump this at each report_timing interval. We will use that
     as a partial backup.
-    If it's an sqlite dtabase, it will dump it (them) all.
     At restore time we'll then need to select some or all of the dump files, and stitch
     them together as appropriate.
 
+    If it's an sqlite dtabase, it will dump it (them) all.
+
     This skin was created to backup a mysql database that runs purely in memory, it has
     since evolved to include sqlite databases as well.
-    Because running a database is a little! fragile (to say the least mI configured my
+    Because running a database is a little! fragile (to say the least.) I configured my
     script to run every hour, and dumps the last 24 hours of the database to the
     xxsql_bup_file in the format...
          {database}-host.{hostname}-{epoch-timestamp}-{window-time-period}.gz
     eg:  weatherpi-host.masterofpis-201706132105-24hours.gz
 
     Those intervals are handled easily on my setup and do not interrupt the report
-    generation in weewx. Your processor, memory and database sizes will be different to
-    mine... YMWV
+    generation in weewx. Your processor, memory, database, archive interval will be
+    different to mine... YMWV
 
- Jun 13 21:05:42 masterofpis wee_reports[26062]: sqlbackup: Created backup in 0.31 seconds
+ Jun 13 21:05:42 masterofpis wee_reports[26062]: sqlbackup: Created backup in 0.31 seconds                                                                                                                                                                                                                                                                                                                                                  You'll need to adjust the values to suit you. Setting sql_debug = "2" in the skin.conf
+    will inform you while you make changes, look at the logs.
+    Or, if you set sql_debug = "4" it will be included at the foot of the sqlbackup.html
+    page.
 
-    You'll need to adjust the values to suit you. Setting sql_debug = "2" in the skin.conf
-    iwill help you while you do so.
-    This script currently performs no error checking so check the resulting files for
-    integrity.
+    This script currently performs no error checking so check the resulting files for                                                                                                                                   integrity.
     disk full, it will return silence!
     empty database, it will also return silence!
 
@@ -66,20 +66,24 @@ class SqlBackup(SearchList):
     we should slip under the radar.
     Keep it small and sensible and that should all remain true.
 
-    Testing: BACK UP your database first - via other methods. (Okay, I've used this script
-    by passing the current unix time, and accepted the temporary weird behaviour.)
+    Testing: BACK UP your database first - via other methods. (Okay, Truth is out. I've used
+    this script by passing the current unix time as the sql_tperiod and have lived to tell
+    the tale.)
     # date +"%s"
     # returns  current epoch time
-
     In short...
-    Open skin.conf, modify the variables, turn on sql_debug
+    Open skin.conf, modify the variables, turn on sql_debug - 2
+
     To help speed up the process, bypass the report_timing setting and cycle through the
     setup process quickly by copying and modifying a minimal weewx.conf file as weewx.wee.conf
     and invoke that by using.
+    One hiccup with the wee_reports method is that it may return longer times if it encounters
+    a locked database. The ultimate test is when it's run under weewx's control, wee_reports
+    is still very useful to fine tune your setup
 
     wee_reports /etc/weewx/weewx.wee.conf && tail -n20 /var/log/syslog | grep wee_report
 
-    then watch your logs
+    then watch your logs, or the sqlbackup.html page if you're generating the report.
 
     # only because I can never remember
     # date -d "11-june-2017 21:00:00" +'%s'
@@ -103,13 +107,13 @@ class SqlBackup(SearchList):
         self.table = self.generator.skin_dict['SqlBackup'].get('sql_table','')
         self.mybup_dir = self.generator.skin_dict['SqlBackup'].get('mysql_bup_dir','/var/backups/mysql')
         self.bup_dir = self.generator.skin_dict['SqlBackup'].get('sql_bup_dir','/var/backups/sql')
-        self.tp_eriod = self.generator.skin_dict['SqlBackup'].get('sql_tp_eriod','86400')
-        self.tp_label = self.generator.skin_dict['SqlBackup'].get('sql_tp_label','daily')
+        self.tp_eriod = self.generator.skin_dict['SqlBackup'].get('sql_tperiod','86400')
+        self.tp_label = self.generator.skin_dict['SqlBackup'].get('sql_tlabel','daily')
         self.html_root = self.generator.skin_dict['SqlBackup'].get('html_root','/var/www/html/weewx')
         self.dated_dir = to_bool(self.generator.skin_dict['SqlBackup'].get('sql_dated_dir', True))
         self.gen_report = to_bool(self.generator.skin_dict['SqlBackup'].get('sql_gen_report', True))
         self.inc_dir = self.generator.skin_dict['SqlBackup'].get('inc_dir', '/tmp/sqlbackup')
-        # local debug switch
+        # local debug switch "2"==weewx.debug, "4" adds extra to html report page
         self.sql_debug = int(self.generator.skin_dict['SqlBackup'].get('sql_debug','0'))
 
         carry_index = '<hr><b>Databases :: </b>'
@@ -127,15 +131,20 @@ class SqlBackup(SearchList):
             os.makedirs(self.inc_dir)
 
         all_file = "%s/alldumps.inc" % (self.inc_dir)
+        head_file = "%s/head.inc" % (self.inc_dir)
+        tail_file = "%s/tail.inc" % (self.inc_dir)
+        links_file = "%s/links.inc" % self.inc_dir
+
         empty = open(all_file, 'w')
         empty.write("\n")
         empty.close()
-        head_file = "%s/head.inc" % (self.inc_dir)
         empty = open(head_file, 'w')
         empty.write("\n")
         empty.close()
-        tail_file = "%s/tail.inc" % (self.inc_dir)
         empty = open(tail_file, 'w')
+        empty.write("\n")
+        empty.close()
+        empty = open(links_file, 'w')
         empty.write("\n")
         empty.close()
        # sys.exit()
@@ -169,18 +178,18 @@ class SqlBackup(SearchList):
             os.makedirs(mydump_dir)
         if not os.path.exists(dump_dir):
             os.makedirs(dump_dir)
-        if self.sql_debug >= 2:
+        if weewx.debug >= 2 or self.sql_debug >= 2:
             syslog.syslog(syslog.LOG_INFO, "sqlbackup:DEBUG: directory for mysql files - %s, sqlite files %s" % (mydump_dir,dump_dir))
 
         if self.myd_base:
             self.mydbase = self.myd_base.split()
             mydbase_len = len(self.mydbase)
-            if self.sql_debug >= 2 :
+            if weewx.debug >= 2 or self.sql_debug >= 2 :
                 syslog.syslog(syslog.LOG_INFO, "sqlbackup:DEBUG: databases, mysql %s named %s" % (mydbase_len, self.mydbase))
             for step in range(mydbase_len):
                 myd_base = self.mydbase[step]
                 t5 = time.time() # this loops start time
-                if self.sql_debug >= 2:
+                if weewx.debug >= 2 or self.sql_debug >= 2:
                     syslog.syslog(syslog.LOG_INFO, "sqlbackup:DEBUG:  mysql database is %s" % myd_base)
 
                 mydump_file = mydump_dir + "/%s-host.%s-%s-%s.gz"  % (myd_base, this_host, file_stamp, self.tp_label)
@@ -199,24 +208,26 @@ class SqlBackup(SearchList):
                 #cmd = "/usr/bin/mysqldump -u%s -p%s -h%s -q  %s %s -w\"dateTime>%s\" %s -R --triggers --single-transaction --skip-opt" %(
                 cmd = "/usr/bin/mysqldump -u%s -p%s -h%s -q  %s %s -w\"dateTime>%s\" %s --single-transaction --skip-opt" %(
                     passwd, passwd, self.host, myd_base, self.table, past_time, self.ignore)
-                if self.sql_debug >= 2:
+                if weewx.debug >= 2 or self.sql_debug >= 2:
                     syslog.syslog(syslog.LOG_INFO, "sqlbackup:DEBUG: %.2f secs to run %s" % ((t6-t5), cmd))
 
                 if self.gen_report:
                     line_count = "100"
                     sql_name = "mysql"
-                    self.report(self.inc_dir, carry_index, readable_time, cmd, mydump_file, myd_base, line_count, sql_name)
+                    self.report(self.inc_dir, carry_index, cmd,
+                                mydump_file, myd_base, line_count, sql_name)
                     carry_index = link_index
+
 
         if self.d_base:
             self.dbase = self.d_base.split()
             dbase_len = len(self.dbase)
-            if self.sql_debug >= 2:
+            if weewx.debug >= 2 or self.sql_debug >= 2:
                 syslog.syslog(syslog.LOG_INFO, "sqlbackup:DEBUG: databases, sqlite %s named %s" % (dbase_len, self.dbase))
             for step in range(dbase_len):
                 d_base = self.dbase[step]
                 t7 = time.time() # this loops start time
-                if self.sql_debug >= 2:
+                if weewx.debug >= 2 or self.sql_debug >= 2:
                     syslog.syslog(syslog.LOG_INFO, "sqlbackup:DEBUG:  sql database is %s" % d_base)
                 dump_file = dump_dir + "/%s-host.%s-%s-%s.gz"  % (d_base, this_host, file_stamp, self.tp_label)
                 cmd = "echo .dump | sqlite3 /var/lib/weewx/%s.sdb" %(d_base)
@@ -228,74 +239,25 @@ class SqlBackup(SearchList):
                 f.close()
                 t8 = time.time() # this loops start time
 
-                if self.sql_debug >= 2:
+                if weewx.debug >= 2 or self.sql_debug >= 2:
                     syslog.syslog(syslog.LOG_INFO, "sqlbackup:DEBUG: %.2f secs to run %s" % ((t8-t7), cmd))
 
                 if self.gen_report:
                     line_count = "20"
                     sql_name = "sql"
-                    self.report(self.inc_dir, carry_index, readable_time, cmd, dump_file, d_base, line_count, sql_name)
+                    self.report(self.inc_dir, carry_index, cmd, 
+                                dump_file, d_base, line_count, sql_name)
                     carry_index = link_index
 
-        # and then the whole process's finishing time
-        t2= time.time()
-        syslog.syslog(syslog.LOG_INFO, "sqlbackup: Total time used in backups and report output: %.2f seconds" % (t2-t1))
+        # complete the remainder of the report .inc's
+        # we generate a time stamp regardless
+        gen_time = time.strftime("%A %B %d, %Y at %H:%M")
+        head = open(head_file, 'w')
+        head.write("<b> %s </b><br>\nIt started the capture from <b>%s</b>\n" % (
+                    gen_time, readable_time))
+        head.close()
 
-
-
-    def report(self, inc_dir, carry_index, readable_time, cmd, dump_file, data_base, line_count, sql_name):
-            # Output for a report using templates
-            global link_index
-            t3= time.time()
-            inc_file = "%s/%s.inc" % (inc_dir, data_base)
-            links_file = "%s/links.inc" % inc_dir
-            all_file = "%s/alldumps.inc" % inc_dir
-            head_file = "%s/head.inc" % inc_dir
-            tail_file = "%s/tail.inc" % inc_dir
-
-            next_index = ('%s.<a href="#%s">%s</a>&nbsp;&nbsp;' % (sql_name, data_base, data_base))
-            link_index = carry_index + next_index
-
-
-            if not os.path.exists(inc_dir):
-                os.makedirs(inc_dir)
-            gen_time = time.strftime("%A %B %d, %Y at %H:%M")
-
-
-            head = open(head_file, 'w')
-            head.write("<b> %s </b><br>\nIt started the capture from <b>%s</b>\n" % (
-                        gen_time, readable_time))
-            head.close()
-
-            inc = open(inc_file, 'w')
-            inc.write('&nbsp;&nbsp;&nbsp;&nbsp;<a id="%s"></a><a href='
-                      '"#Top">Back to top</a>\n<h2>Extract from the %s '
-                      'Database dump file: </h2>\n<pre>%s\n\n\n' % (
-                      data_base, data_base, cmd))
-            # broken pipe error from wee_reports appears harmless & is due to head truncating the operation.
-            inc.close()
-            my_head = "zcat  %s | head -n%s >> %s" % (dump_file, line_count, inc_file)
-            os.system(my_head)
-            inc = open(inc_file, 'a')
-            inc.write("\n[...]\n")
-            inc.close()
-            my_tail = "zcat %s | tail -n20 >> %s" % (dump_file, inc_file)
-            os.system(my_tail)
-
-            l_inks=open(links_file, 'w')
-            sys_index =('<br>&nbsp;&nbsp;&nbsp;<b>System ::</b>&nbsp;&nbsp;'
-                        '&nbsp;&nbsp;<a href="#disk">disks</a>&nbsp;-&nbsp;'
-                        '<a href="#memory">memory</a>&nbsp;-&nbsp;<a href='
-                        '"#mounts">mounts</a>&nbsp;&nbsp;<br>')
-            h_tml =[link_index, sys_index, "<hr>"]
-            l_inks.writelines(h_tml)
-            l_inks.close()
-
-            os.system("cat %s >> %s" % (inc_file, all_file))
-            all_lot = open(all_file, 'a')
-            all_lot.write("</pre>")
-            all_lot.close()
-
+        if self.gen_report:
             tail = open(tail_file, 'w')
             tail.write('\n<a id="disk"></a><a href="#Top">Back to top</a><h2>'
                        ' Disk Usage: </h2>&nbsp;&nbsp;&nbsp;&nbsp;\n<pre>')
@@ -316,7 +278,84 @@ class SqlBackup(SearchList):
             tail.write("</pre>")
             tail.close()
 
-            if self.sql_debug >= 2 :
+            if self.sql_debug >= 4 :
+                tail = open(tail_file, 'a')
+                tail.write('</pre><hr>\n<a id="debug"></a><a href="#Top">Back to top'
+                           '</a><h2> DEBUG output: </h2>&nbsp;&nbsp;&nbsp;'
+                           '&nbsp;\n<pre>')
+                tail.close()
+                os.system("grep /var/log/syslog  -e sqlbackup | tail -n50 >> %s" % tail_file)
+                os.system("ls  -al %s | tail -n10 >> %s" % (mydump_dir, tail_file))
+                os.system("ls  -al %s | tail -n10 >> %s" % (dump_dir, tail_file))
+                tail = open(tail_file, 'a')
+                tail.write('</pre>\n')
+                tail.close()
+        else:
+            all_file = "%s/alldumps.inc" % self.inc_dir
+            dissd = open(all_file, 'a')
+            dissd.write("<br>Report generation is disabled in skin.conf")
+            dissd.close()
+
+
+        # and then the whole process's finishing time
+        t2= time.time()
+        syslog.syslog(syslog.LOG_INFO, "sqlbackup: Total time used in backups and report output: %.2f seconds" % (t2-t1))
+
+
+
+    def report(self, inc_dir, carry_index, cmd, dump_file,
+               data_base, line_count, sql_name):
+            # Output for a report using templates
+            global link_index
+            t3= time.time()
+            inc_file = "%s/%s.inc" % (inc_dir, data_base)
+            links_file = "%s/links.inc" % inc_dir
+            all_file = "%s/alldumps.inc" % inc_dir
+
+            next_index = ('%s.<a href="#%s">%s</a>&nbsp;&nbsp;' % (sql_name, data_base, data_base))
+            link_index = carry_index + next_index
+
+
+            if not os.path.exists(inc_dir):
+                os.makedirs(inc_dir)
+
+            inc = open(inc_file, 'w')
+            inc.write('&nbsp;&nbsp;&nbsp;&nbsp;<a id="%s"></a><a href='
+                      '"#Top">Back to top</a>\n<h2>Extract from the %s '
+                      'Database dump file: </h2>\n<pre>%s\n\n\n' % (
+                      data_base, data_base, cmd))
+            # broken pipe error from wee_reports appears harmless & is due to head truncating the operation.
+            inc.close()
+            my_head = "zcat  %s | head -n%s >> %s" % (dump_file, line_count, inc_file)
+            os.system(my_head)
+            inc = open(inc_file, 'a')
+            inc.write("\n[...]\n")
+            inc.close()
+            my_tail = "zcat %s | tail -n20 >> %s" % (dump_file, inc_file)
+            os.system(my_tail)
+
+            l_inks=open(links_file, 'w')
+            if self.sql_debug >= 4 :
+                sys_index =('<br>&nbsp;&nbsp;&nbsp;<b>System ::</b>&nbsp;&nbsp;'
+                            '&nbsp;&nbsp;<a href="#disk">disks</a>&nbsp;-&nbsp;'
+                            '<a href="#memory">memory</a>&nbsp;-&nbsp;<a href='
+                            '"#mounts">mounts</a>&nbsp;-&nbsp;<a href="#debug"'
+                            '>DEBUG output</a><br>')
+            else:
+                sys_index =('<br>&nbsp;&nbsp;&nbsp;<b>System ::</b>&nbsp;&nbsp;'
+                            '&nbsp;&nbsp;<a href="#disk">disks</a>&nbsp;-&nbsp;'
+                            '<a href="#memory">memory</a>&nbsp;-&nbsp;<a href='
+                            '"#mounts">mounts</a>&nbsp;&nbsp;<br>')
+            h_tml =[link_index, sys_index, "<hr>"]
+            l_inks.writelines(h_tml)
+            l_inks.close()
+
+            os.system("cat %s >> %s" % (inc_file, all_file))
+            all_lot = open(all_file, 'a')
+            all_lot.write("</pre>")
+            all_lot.close()
+
+            if weewx.debug >= 2 or self.sql_debug >= 2 :
                 t4= time.time() 
                 syslog.syslog(syslog.LOG_INFO, "sqlbackup:DEBUG: Created %s in %.2f secs" % (
                     inc_file, t4-t3))
