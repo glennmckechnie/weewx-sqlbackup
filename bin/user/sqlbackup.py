@@ -40,14 +40,14 @@ class SqlBackup(SearchList):
 
     This skin was created to backup a mysql database that runs purely in memory, it has
     since evolved to include sqlite databases as well.
-    Because running a database is a little! fragile (to say the least mI configured my 
+    Because running a database is a little! fragile (to say the least mI configured my
     script to run every hour, and dumps the last 24 hours of the database to the
     xxsql_bup_file in the format...
          {database}-host.{hostname}-{epoch-timestamp}-{window-time-period}.gz
     eg:  weatherpi-host.masterofpis-201706132105-24hours.gz
 
     Those intervals are handled easily on my setup and do not interrupt the report
-    generation in weewx. Your processor, memory and database sizes will be different to 
+    generation in weewx. Your processor, memory and database sizes will be different to
     mine... YMWV
 
  Jun 13 21:05:42 masterofpis wee_reports[26062]: sqlbackup: Created backup in 0.31 seconds
@@ -66,10 +66,11 @@ class SqlBackup(SearchList):
     we should slip under the radar.
     Keep it small and sensible and that should all remain true.
 
-    Testing: BACK UP your database first - via other methods. (Okay, I've used this script 
-    by passing the current unix time 
+    Testing: BACK UP your database first - via other methods. (Okay, I've used this script
+    by passing the current unix time, and accepted the temporary weird behaviour.)
     # date +"%s"
     # returns  current epoch time
+
     In short...
     Open skin.conf, modify the variables, turn on sql_debug
     To help speed up the process, bypass the report_timing setting and cycle through the
@@ -79,6 +80,10 @@ class SqlBackup(SearchList):
     wee_reports /etc/weewx/weewx.wee.conf && tail -n20 /var/log/syslog | grep wee_report
 
     then watch your logs
+
+    # only because I can never remember
+    # date -d "11-june-2017 21:00:00" +'%s'
+    # 1497178800
     """
 
     def __init__(self, generator):
@@ -142,14 +147,12 @@ class SqlBackup(SearchList):
         else:
             self.ignore = ""
 
-        #https://stackoverflow.com/questions/4271740/how-can-i-use-python-to-get-the-system-hostname
         this_host = os.uname()[1]
         file_stamp = time.strftime("%Y%m%d%H%M")
 
         # add 900 seconds to ensure data ovelaps between runs.
         self.tp_eriod = int(self.tp_eriod) + int('900')
         past_time = int(time.time()) - int(self.tp_eriod)  # then for the dump process
-        #https://stackoverflow.com/questions/3682748/converting-unix-timestamp-string-to-readable-date-in-python
         readable_time = (datetime.fromtimestamp(past_time).strftime('%Y-%m-%d %H:%M:%S'))
         if weewx.debug >= 2 or self.sql_debug >= 2:
             syslog.syslog(syslog.LOG_INFO, "sqlbackup:DEBUG: starting from %s" % readable_time)
@@ -162,7 +165,6 @@ class SqlBackup(SearchList):
         mydump_dir = self.mybup_dir + "%s" % (date_dir_str)
         dump_dir = self.bup_dir + "%s" % (date_dir_str)
 
-        # https://stackoverflow.com/questions/273192/how-can-i-create-a-directory-if-it-does-not-exist
         if not os.path.exists(mydump_dir):
             os.makedirs(mydump_dir)
         if not os.path.exists(dump_dir):
@@ -239,13 +241,10 @@ class SqlBackup(SearchList):
         t2= time.time()
         syslog.syslog(syslog.LOG_INFO, "sqlbackup: Total time used in backups and report output: %.2f seconds" % (t2-t1))
 
-# date -d "11-june-2017 21:00:00" +'%s'
-# 1497178800
 
 
     def report(self, inc_dir, carry_index, readable_time, cmd, dump_file, data_base, line_count, sql_name):
             # Output for a report using templates
-            # ugly html generation,
             global link_index
             t3= time.time()
             inc_file = "%s/%s.inc" % (inc_dir, data_base)
@@ -253,7 +252,6 @@ class SqlBackup(SearchList):
             all_file = "%s/alldumps.inc" % inc_dir
             head_file = "%s/head.inc" % inc_dir
             tail_file = "%s/tail.inc" % inc_dir
-            #stamp_file = "%s/timestamp.inc" % inc_dir
 
             next_index = ('%s.<a href="#%s">%s</a>&nbsp;&nbsp;' % (sql_name, data_base, data_base))
             link_index = carry_index + next_index
@@ -263,14 +261,8 @@ class SqlBackup(SearchList):
                 os.makedirs(inc_dir)
             gen_time = time.strftime("%A %B %d, %Y at %H:%M")
 
-            #os.system("echo %s > %s " % (gen_time, stamp_file))
-            #os.system("echo '</b></br>It started the capture from <b>%s.\n' >> %s " % (readable_time, stamp_file))
 
             head = open(head_file, 'w')
-            #head.write("This page shows a summary of the output from the"
-            #            "sqlbackup that last ran on <b> %s </b><br>\nIt "
-            #            "started the capture from <b>%s</b>\n" % (
-            #            gen_time, readable_time))
             head.write("<b> %s </b><br>\nIt started the capture from <b>%s</b>\n" % (
                         gen_time, readable_time))
             head.close()
@@ -335,6 +327,6 @@ class SqlBackup(SearchList):
 
 if __name__ == '__main__':
 
-    # None of this works ! :-)
-    # use wee_reports instead.
+    # None of this works !
+    # use wee_reports instead, see the inline comments above.
     pass
