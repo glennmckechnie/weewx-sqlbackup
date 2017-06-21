@@ -123,7 +123,7 @@ These files are one-shot only - unless we modify them.
 
 To add data from another of these files, you need to do some editing.
 
-## SO, If you want to use more than one file...
+##### SO, If you want to use more than one file...
 
 We need:-
 
@@ -211,43 +211,59 @@ or
     09:22 AM $ echo 'pragma integrity_check;' | sqlite3 pmon.sdb
     ok
 
+### Another view - Info from the scripts comments
 
-## Notes and WARNINGS (Again! and from skin.conf)
+    """ Notes and WARNINGS
 
-DON'T back the whole database up with this skin. You'll overload weewx and weird
-things will happen.
+    DON'T back the whole database up with this skin. You'll overload weewx and weird
+    things will happen.
 
-The idea is to instead select a small rolling window from the database, and dump
-this at each report_timing interval. We will use that as a partial backup.
-At restore time we'll then need to select some or all, and stitch them together as
-appropriate.
+    The idea is to instead select a small rolling window from the database (if its a
+    MySQL or  MariaDB) and dump this at each report_timing interval. We will use that
+    as a partial backup.
+    If it's an sqlite dtabase, it will dump it (them) all.
+    At restore time we'll then need to select some or all of the dump files, and stitch
+    them together as appropriate.
 
-This skin was created to backup a mysql database that runs purely in memory.
-And because that's a little! fragile, the script runs every hour, and dumps the last
-24 hours of the database to the mysql_bup_file in the format... 
-{database}-host.{hostname}-{epoch-timestamp}-{window-time-period}.gz 
- eg:weatherpi-host.masterofpis-201706132105-24hours.gz 
+    This skin was created to backup a mysql database that runs purely in memory, it has
+    since evolved to include sqlite databases as well.
+    Because running a database is a little! fragile (to say the least mI configured my
+    script to run every hour, and dumps the last 24 hours of the database to the
+    xxsql_bup_file in the format...
+         {database}-host.{hostname}-{epoch-timestamp}-{window-time-period}.gz
+    eg:  weatherpi-host.masterofpis-201706132105-24hours.gz
 
- Those intervals are handled easily on my setup and do not interrupt the report
-generation in weewx. YMWV 
- 
-Jun 13 21:05:42 masterofpis wee_reports[26062]: sqlbackup: Created backup in 0.31 seconds
+    Those intervals are handled easily on my setup and do not interrupt the report
+    generation in weewx. Your processor, memory and database sizes will be different to
+    mine... YMWV
 
-You'll need to adjust the values to suit you. Set sql_debug = "2" in the skin.conf
-while you do so.
-This script currently performs no error checking so check the resulting files for 
-integrity.
-disk full, will return silence!
-empty database, will return silence!
+ Jun 13 21:05:42 masterofpis wee_reports[26062]: sqlbackup: Created backup in 0.31 seconds
 
-Reasons for doing it this way (instead of seperate scripts and cron) are that it
-should integrate easily with the weewx process. This report runs after database
-writes have been done (providing you don't ask too much of it), and keeping it
-under the weewx umbrella fits the "one stop shop" model.
-Keep it small and sensible and that should all remain true.
+    You'll need to adjust the values to suit you. Setting sql_debug = "2" in the skin.conf
+    iwill help you while you do so.
+    This script currently performs no error checking so check the resulting files for
+    integrity.
+    disk full, it will return silence!
+    empty database, it will also return silence!
 
-Testing: Backup your mysql database first - via other methods.
-Modify your variables, and turn on debug in the skin.conf file
-Then copy and modify a minimal weewx.conf file as weewx.wee.conf and invoke it by using.
+    Reasons for doing it this way (instead of seperate scripts and cron) are that it
+    should integrate easily with the weewx proces. This report runs after database
+    writes have been done (providing you don't ask too much of it), and keeping it
+    under the weewx umbrella fits the "one stop shop" model. If we don't interfere too much
+    we should slip under the radar.
+    Keep it small and sensible and that should all remain true.
+
+    Testing: BACK UP your database first - via other methods. (Okay, I've used this script
+    by passing the current unix time·
+    # date +"%s"
+    # returns  current epoch time
+    In short...
+    Open skin.conf, modify the variables, turn on sql_debug
+    To help speed up the process, bypass the report_timing setting and cycle through the
+    setup process quickly by copying and modifying a minimal weewx.conf file as weewx.wee.conf
+    and invoke that by using.
 
     wee_reports /etc/weewx/weewx.wee.conf && tail -n20 /var/log/syslog | grep wee_report
+
+    then watch your logs
+    """ 

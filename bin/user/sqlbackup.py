@@ -31,41 +31,54 @@ class SqlBackup(SearchList):
     DON'T back the whole database up with this skin. You'll overload weewx and weird
     things will happen.
 
-    The idea is to instead select a small rolling window from the database, and dump
-    this at each report_timing interval. We will use that as a partial backup.
-    At restore time we'll then need to select some or all, and stitch them together as
-    appropriate.
+    The idea is to instead select a small rolling window from the database (if its a
+    MySQL or  MariaDB) and dump this at each report_timing interval. We will use that
+    as a partial backup.
+    If it's an sqlite dtabase, it will dump it (them) all.
+    At restore time we'll then need to select some or all of the dump files, and stitch
+    them together as appropriate.
 
     This skin was created to backup a mysql database that runs purely in memory, it has
     since evolved to include sqlite databases as well.
-    And because that's a little! fragile, the script runs every hour, and dumps the last
-    24 hours of the database to the sql_bup_file in the format...
+    Because running a database is a little! fragile (to say the least mI configured my 
+    script to run every hour, and dumps the last 24 hours of the database to the
+    xxsql_bup_file in the format...
          {database}-host.{hostname}-{epoch-timestamp}-{window-time-period}.gz
     eg:  weatherpi-host.masterofpis-201706132105-24hours.gz
 
     Those intervals are handled easily on my setup and do not interrupt the report
-    generation in weewx. YMWV
+    generation in weewx. Your processor, memory and database sizes will be different to 
+    mine... YMWV
 
  Jun 13 21:05:42 masterofpis wee_reports[26062]: sqlbackup: Created backup in 0.31 seconds
 
-    You'll need to adjust the values to suit you. Set sql_debug = "2" in the skin.conf
-    while you do so. 
+    You'll need to adjust the values to suit you. Setting sql_debug = "2" in the skin.conf
+    iwill help you while you do so.
     This script currently performs no error checking so check the resulting files for
     integrity.
-    disk ful, will return silence!
-    empty database, will return silence!
+    disk full, it will return silence!
+    empty database, it will also return silence!
 
     Reasons for doing it this way (instead of seperate scripts and cron) are that it
     should integrate easily with the weewx proces. This report runs after database
     writes have been done (providing you don't ask too much of it), and keeping it
-    under the weewx umbrella fits the "one stop shop" model.
+    under the weewx umbrella fits the "one stop shop" model. If we don't interfere too much
+    we should slip under the radar.
     Keep it small and sensible and that should all remain true.
 
-    Testing: Backup your database first - via other methods.
-    Modify your variables, and turn on debug in the skin.conf file
-    Then copy and modify a minimal weewx.conf file as weewx.wee.conf and invoke it by using.
+    Testing: BACK UP your database first - via other methods. (Okay, I've used this script 
+    by passing the current unix time 
+    # date +"%s"
+    # returns  current epoch time
+    In short...
+    Open skin.conf, modify the variables, turn on sql_debug
+    To help speed up the process, bypass the report_timing setting and cycle through the
+    setup process quickly by copying and modifying a minimal weewx.conf file as weewx.wee.conf
+    and invoke that by using.
 
     wee_reports /etc/weewx/weewx.wee.conf && tail -n20 /var/log/syslog | grep wee_report
+
+    then watch your logs
     """
 
     def __init__(self, generator):
@@ -154,13 +167,13 @@ class SqlBackup(SearchList):
             os.makedirs(mydump_dir)
         if not os.path.exists(dump_dir):
             os.makedirs(dump_dir)
-        if weewx.debug >= 2 or self.sql_debug >= 2:
+        if self.sql_debug >= 2:
             syslog.syslog(syslog.LOG_INFO, "sqlbackup:DEBUG: directory for mysql files - %s, sqlite files %s" % (mydump_dir,dump_dir))
 
         if self.myd_base:
             self.mydbase = self.myd_base.split()
             mydbase_len = len(self.mydbase)
-            if weewx.debug >= 2 or self.sql_debug >= 2 :
+            if self.sql_debug >= 2 :
                 syslog.syslog(syslog.LOG_INFO, "sqlbackup:DEBUG: databases, mysql %s named %s" % (mydbase_len, self.mydbase))
             for step in range(mydbase_len):
                 myd_base = self.mydbase[step]
@@ -184,7 +197,7 @@ class SqlBackup(SearchList):
                 #cmd = "/usr/bin/mysqldump -u%s -p%s -h%s -q  %s %s -w\"dateTime>%s\" %s -R --triggers --single-transaction --skip-opt" %(
                 cmd = "/usr/bin/mysqldump -u%s -p%s -h%s -q  %s %s -w\"dateTime>%s\" %s --single-transaction --skip-opt" %(
                     passwd, passwd, self.host, myd_base, self.table, past_time, self.ignore)
-                if weewx.debug >= 2 or self.sql_debug >= 2:
+                if self.sql_debug >= 2:
                     syslog.syslog(syslog.LOG_INFO, "sqlbackup:DEBUG: %.2f secs to run %s" % ((t6-t5), cmd))
 
                 if self.gen_report:
@@ -213,15 +226,15 @@ class SqlBackup(SearchList):
                 f.close()
                 t8 = time.time() # this loops start time
 
-                if weewx.debug >= 2 or self.sql_debug >= 2:
+                if self.sql_debug >= 2:
                     syslog.syslog(syslog.LOG_INFO, "sqlbackup:DEBUG: %.2f secs to run %s" % ((t8-t7), cmd))
 
                 if self.gen_report:
                     line_count = "20"
                     sql_name = "sql"
                     self.report(self.inc_dir, carry_index, readable_time, cmd, dump_file, d_base, line_count, sql_name)
-
                     carry_index = link_index
+
         # and then the whole process's finishing time
         t2= time.time()
         syslog.syslog(syslog.LOG_INFO, "sqlbackup: Total time used in backups and report output: %.2f seconds" % (t2-t1))
@@ -311,7 +324,7 @@ class SqlBackup(SearchList):
             tail.write("</pre>")
             tail.close()
 
-            if weewx.debug >= 2 or self.sql_debug >= 2 :
+            if self.sql_debug >= 2 :
                 t4= time.time() 
                 syslog.syslog(syslog.LOG_INFO, "sqlbackup:DEBUG: Created %s in %.2f secs" % (
                     inc_file, t4-t3))
