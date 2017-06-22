@@ -1,10 +1,9 @@
 #
 #    Copyright (c) 2017 Glenn McKechnie glenn.mckechnie@gmail.com>
-#    Credit to Tom Keffer <tkeffer@gmail.com> and the core weewx team.
-#
+#    Credit to Tom Keffer <tkeffer@gmail.com>, Matthew Wall and the core
+#    weewx team, all from whom I've borrowed heavily.
 #
 #    See the file LICENSE.txt for your full rights.
-#
 #
 
 import os
@@ -20,9 +19,16 @@ from datetime import datetime
 import weewx.engine
 import weewx.manager
 import weewx.units
+from weewx.wxengine import StdService
 from weewx.cheetahgenerator import SearchList
 from weeutil.weeutil import to_bool
 
+def logmsg(level, msg):
+    syslog.syslog(level, 'sqlbackup : %s' % msg)
+
+def loginf(msg):
+    logmsg(syslog.LOG_INFO, msg)
+#   loginf("address=0x%02x" % addr)
 
 class SqlBackup(SearchList):
     """ Notes and WARNINGS
@@ -178,8 +184,7 @@ class SqlBackup(SearchList):
         #dump - because there is no dateTime in the metadata table.
         if len(self.table) < 1:
             self.ignore = "--ignore-table=%s.archive_day__metadata" % self.dbase
-            syslog.syslog(syslog.LOG_INFO, "sqlbackup:DEBUG: ALL tables"
-                              "specified,including option %s" % self.ignore)
+            loginf("DEBUG: ALL tables specified,including option %s" % self.ignore)
         else:
             self.ignore = ""
 
@@ -194,8 +199,7 @@ class SqlBackup(SearchList):
         readable_time = (datetime.fromtimestamp(past_time).strftime(
             '%Y-%m-%d %H:%M:%S'))
         if weewx.debug >= 2 or self.sql_debug >= 2:
-            syslog.syslog(syslog.LOG_INFO, "sqlbackup:DEBUG:"
-                "starting from %s" % readable_time)
+            loginf("DEBUG: starting from %s" % readable_time)
         # If true, create the remote directory with a date structure
         # eg: <path to backup directory>/2017/02/12/var/lib/weewx...
         if self.dated_dir:
@@ -210,29 +214,26 @@ class SqlBackup(SearchList):
         if not os.path.exists(dump_dir):
             os.makedirs(dump_dir)
         if weewx.debug >= 2 or self.sql_debug >= 2:
-            syslog.syslog(syslog.LOG_INFO, "sqlbackup:DEBUG: directory for"
-                "mysql files - %s, sqlite files %s" % (mydump_dir,dump_dir))
+           loginf("DEBUG: directory for mysql files - %s, sqlite files %s" % (
+               mydump_dir,dump_dir))
 
         if self.myd_base:
             self.mydbase = self.myd_base.split()
             mydbase_len = len(self.mydbase)
             if weewx.debug >= 2 or self.sql_debug >= 2 :
-                syslog.syslog(syslog.LOG_INFO, "sqlbackup:DEBUG: databases,"
-                    "mysql %s named %s" % (mydbase_len, self.mydbase))
+                loginf("DEBUG: databases, mysql %s named %s" % (mydbase_len,
+                self.mydbase))
             for step in range(mydbase_len):
                 myd_base = self.mydbase[step]
                 t5 = time.time() # this loops start time
                 if weewx.debug >= 2 or self.sql_debug >= 2:
-                    syslog.syslog(syslog.LOG_INFO, "sqlbackup:DEBUG:  mysql"
-                        "database is %s" % myd_base)
+                    loginf("DEBUG:  mysql database is %s" % myd_base)
 
                 mydump_file = mydump_dir + "/%s-host.%s-%s-%s.gz"  % (
-                    Myd_base, this_host, file_stamp, self.tp_label)
+                    myd_base, this_host, file_stamp, self.tp_label)
                 #cmd = "/usr/bin/mysqldump -u%s -p%s -h%s -q  %s %s -w\"dateTime>%s\" %s -R --triggers --single-transaction --skip-opt" %(
-                cmd = "/usr/bin/mysqldump -u%s -p%s -h%s -q  %s %s"
-                "-w\"dateTime>%s\" %s --single-transaction --skip-opt" %(
-                      self.user, self.passwd, self.host, myd_base, self.table,
-                      past_time, self.ignore)
+                cmd = "/usr/bin/mysqldump -u%s -p%s -h%s -q  %s %s -w\"dateTime>%s\" %s --single-transaction --skip-opt" %(
+                       self.user, self.passwd, self.host, myd_base, self.table, past_time, self.ignore)
 
                 p1 = subprocess.Popen(cmd, stdout=subprocess.PIPE,
                                       stderr=subprocess.STDOUT, shell=True)
@@ -244,13 +245,10 @@ class SqlBackup(SearchList):
 
                 passwd = "XxXxX"
                 #cmd = "/usr/bin/mysqldump -u%s -p%s -h%s -q  %s %s -w\"dateTime>%s\" %s -R --triggers --single-transaction --skip-opt" %(
-                cmd = "/usr/bin/mysqldump -u%s -p%s -h%s -q  %s %s"
-                "-w\"dateTime>%s\" %s --single-transaction --skip-opt" %(
-                    passwd, passwd, self.host, myd_base, self.table, past_time,
-                    self.ignore)
+                cmd = "/usr/bin/mysqldump -u%s -p%s -h%s -q  %s %s -w\"dateTime>%s\" %s --single-transaction --skip-opt" %(
+                    passwd, passwd, self.host, myd_base, self.table, past_time, self.ignore)
                 if weewx.debug >= 2 or self.sql_debug >= 2:
-                    syslog.syslog(syslog.LOG_INFO, "sqlbackup:DEBUG: %.2f"
-                        "secs to run %s" % ((t6-t5), cmd))
+                    loginf("DEBUG: %.2f secs to run %s" % ((t6-t5), cmd))
 
                 if self.gen_report:
                     line_count = "100"
@@ -264,14 +262,13 @@ class SqlBackup(SearchList):
             self.dbase = self.d_base.split()
             dbase_len = len(self.dbase)
             if weewx.debug >= 2 or self.sql_debug >= 2:
-                syslog.syslog(syslog.LOG_INFO, "sqlbackup:DEBUG: databases,"
-                              "sqlite %s named %s" % (dbase_len, self.dbase))
+                loginf("DEBUG: databases, sqlite %s named %s" % 
+                    (dbase_len, self.dbase))
             for step in range(dbase_len):
                 d_base = self.dbase[step]
                 t7 = time.time() # this loops start time
                 if weewx.debug >= 2 or self.sql_debug >= 2:
-                    syslog.syslog(syslog.LOG_INFO, "sqlbackup:DEBUG:  sql"
-                                  "database is %s" % d_base)
+                    loginf("DEBUG:  sql database is %s" % d_base)
                 dump_file = dump_dir + "/%s-host.%s-%s-%s.gz"  % (
                                d_base, this_host, file_stamp, self.tp_label)
                 cmd = "echo .dump | sqlite3 /var/lib/weewx/%s.sdb" %(d_base)
@@ -285,8 +282,7 @@ class SqlBackup(SearchList):
                 t8 = time.time() # this loops start time
 
                 if weewx.debug >= 2 or self.sql_debug >= 2:
-                    syslog.syslog(syslog.LOG_INFO, "sqlbackup:DEBUG: %.2f secs"
-                                  "to run %s" % ((t8-t7), cmd))
+                    loginf("DEBUG: %.2f secs to run %s" % ((t8-t7), cmd))
 
                 if self.gen_report:
                     line_count = "20"
@@ -341,7 +337,7 @@ class SqlBackup(SearchList):
                          '<h2>MySQL files: </h2>&nbsp;&nbsp;&nbsp;&nbsp;\n'
                          '<pre>')
                 tl.close()
-                os.system("ls  -al %s | tail -n10 >> %s" % (
+                os.system("ls -gtr %s | tail -n10 >> %s" % (
                            mydump_dir, tail_file))
 
                 tl = open(tail_file, 'a')
@@ -350,7 +346,7 @@ class SqlBackup(SearchList):
                          '<h2>sqlite files: </h2>&nbsp;&nbsp;&nbsp;&nbsp;\n'
                          '<pre>')
                 tl.close()
-                os.system("ls  -al %s | tail -n10 >> %s" % (dump_dir,tail_file))
+                os.system("ls -gtr %s | tail -n10 >> %s" % (dump_dir,tail_file))
 
                 tl = open(tail_file, 'a')
                 tl.write('</pre>\n')
@@ -370,7 +366,7 @@ class SqlBackup(SearchList):
 
         # and then the whole process's finishing time
         t2= time.time()
-        syslog.syslog(syslog.LOG_INFO, "sqlbackup: Total time used in backups"
+        loginf("sqlbackup: Total time used in backups"
                       "and report output: %.2f seconds" % (t2-t1))
 
 
@@ -404,7 +400,7 @@ class SqlBackup(SearchList):
                        dump_file, line_count, inc_file)
             os.system(my_head)
             inc = open(inc_file, 'a')
-            inc.write("\n[...]\n")
+            inc.write("\n[...]\n\n")
             inc.close()
             my_tail = "zcat %s | tail -n20 >> %s" % (dump_file, inc_file)
             os.system(my_tail)
@@ -440,8 +436,7 @@ class SqlBackup(SearchList):
 
             if weewx.debug >= 2 or self.sql_debug >= 2 :
                 t4= time.time() 
-                syslog.syslog(syslog.LOG_INFO, "sqlbackup:DEBUG: Created %s"
-                     "in %.2f secs" % (inc_file, t4-t3))
+                loginf("DEBUG: Created %s in %.2f secs" % (inc_file, t4-t3))
 
             return link_index
 
