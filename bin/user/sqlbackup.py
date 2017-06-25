@@ -5,6 +5,7 @@
 #
 #    See the file LICENSE.txt for your full rights.
 #
+#
 
 import os
 import errno
@@ -23,13 +24,24 @@ from weewx.wxengine import StdService
 from weewx.cheetahgenerator import SearchList
 from weeutil.weeutil import to_bool
 
+#all_file = "%s/alldumps.inc" % (self.inc_dir)
+#head_file = "%s/head.inc" % (self.inc_dir)
+#tail_file = "%s/tail.inc" % (self.inc_dir)
+#links_file = "%s/links.inc" % self.inc_dir
+
 def logmsg(level, msg):
     syslog.syslog(level, 'sqlbackup : %s' % msg)
 
 def loginf(msg):
     logmsg(syslog.LOG_INFO, msg)
-#   loginf("address=0x%02x" % addr)
 
+def tlwrite(txt):
+    tl = open(tail_file, 'w')
+    tl.write(txt)
+    tl.close()
+
+#            tl.write('\n<a id="disk"></a><a href="#Top">Back to top</a><h2>'
+#                       ' Disk Usage: </h2>&nbsp;&nbsp;&nbsp;&nbsp;\n<pre>')
 class SqlBackup(SearchList):
     """ Notes and WARNINGS
 
@@ -76,12 +88,12 @@ class SqlBackup(SearchList):
     Keep it small and sensible and that should all remain true.
 
     Testing: BACK UP your database first - via other methods. (Okay, Truth is.
-    I've used this script by passing the current unix time as the sql_tperiod
+    I've used this script by passing a suitable unix time string as the sql_tperiod
     and have lived to tell the tale. I was able to put the pieces together
     again.)
-
-    # date +"%s"
-    # returns  current epoch time
+    60*60*24*365*2
+    sql_tperiod = "63072000"
+    
     In short...
     Open skin.conf, modify the variables, turn on sql_debug - 2
 
@@ -100,6 +112,9 @@ class SqlBackup(SearchList):
     # only because I can never remember
     # date -d "11-june-2017 21:00:00" +'%s'
     # 1497178800
+    #
+    # date +"%s"
+    # returns  current epoch time
     """
 
     def __init__(self, generator):
@@ -162,7 +177,13 @@ class SqlBackup(SearchList):
         # local debug switch "2"==weewx.debug, "4" adds extra to html report page
         self.sql_debug = int(self.generator.skin_dict['SqlBackup'].get('sql_debug','0'))
 
+	loginf("sql_debug = %s" %self.sql_debug)
+	loginf("gen_report = %s" %self.gen_report)
+	loginf("mysqldata = %s" %self.myd_base)
+	loginf("sqldata = %s" %self.d_base)
+
         carry_index = '<hr><b>Databases :: </b>'
+        start_loop = 0
 
         t1 = time.time() # this process's start time
 
@@ -177,6 +198,15 @@ class SqlBackup(SearchList):
         head_file = "%s/head.inc" % (self.inc_dir)
         tail_file = "%s/tail.inc" % (self.inc_dir)
         links_file = "%s/links.inc" % self.inc_dir
+        sys_file = "%s/syslinks.inc" % self.inc_dir
+
+        chck = open(all_file, 'a')
+        chck.write("<p><b>There's nothing to report.</b></p><p>Do you have any "
+            "databases configured?</br> Check the config file (skin.conf)</p>")
+        chck.close()
+        strt = open(links_file, 'w')
+        strt.write(carry_index)
+        strt.close()
 
        # sys.exit()
         # Because we use the  "--where..." clause, we run into trouble when
@@ -214,7 +244,7 @@ class SqlBackup(SearchList):
         if not os.path.exists(dump_dir):
             os.makedirs(dump_dir)
         if weewx.debug >= 2 or self.sql_debug >= 2:
-           loginf("DEBUG: directory for mysql files - %s, sqlite files %s" % (
+           loginf("DEBUG: directory for backup files - %s, sqlite files %s" % (
                mydump_dir,dump_dir))
 
         if self.myd_base:
@@ -253,9 +283,13 @@ class SqlBackup(SearchList):
                 if self.gen_report:
                     line_count = "100"
                     sql_name = "mysql"
+                    loginf("0             DEBUG: start_loop starts as %s" % (start_loop))
                     self.report(self.inc_dir, carry_index, cmd,
-                                mydump_file, myd_base, line_count, sql_name)
+                                mydump_file, myd_base, line_count, sql_name, start_loop)
                     carry_index = link_index
+                    loginf("2             DEBUG: start_loop remains at %s" % (start_loop))
+                    start_loop = strt_loop
+                    loginf("2             DEBUG: start_loop reset as %s" % (start_loop))
 
 
         if self.d_base:
@@ -287,9 +321,13 @@ class SqlBackup(SearchList):
                 if self.gen_report:
                     line_count = "20"
                     sql_name = "sql"
+                    loginf("3             DEBUG: start_loop starts as %s" % (start_loop))
                     self.report(self.inc_dir, carry_index, cmd, 
-                                dump_file, d_base, line_count, sql_name)
+                                dump_file, d_base, line_count, sql_name, start_loop)
                     carry_index = link_index
+                    loginf("3             DEBUG: start_loop remains as %s" % (start_loop))
+                    start_loop = strt_loop
+                    loginf("3             DEBUG: start_loop resets as %s" % (start_loop))
 
         # complete the remainder of the report .inc's
         # we generate a time stamp regardless
@@ -299,11 +337,38 @@ class SqlBackup(SearchList):
                     gen_time, readable_time))
         hd.close()
 
-        if self.gen_report:
+        if self.gen_report: # and not self.sql_debug == 0:
+            sys_links=open(sys_file, 'w')
+            if self.sql_debug >= 4 :
+                sys_index =('<br>&nbsp;&nbsp;&nbsp;<b>System ::</b>'
+                            '&nbsp;&nbsp;&nbsp;&nbsp;'
+                            '<a href="#disk">disks</a>&nbsp;-&nbsp;'
+                            '<a href="#memory">memory</a>&nbsp;-&nbsp;'
+                            '<a href="#mounts">mounts</a>&nbsp;&nbsp;'
+                            '<b>DEBUG output :: </b>'
+                            '<a href="#logs">logs</a>&nbsp;-&nbsp;'
+                            '<a href="#mysql">mysql</a>&nbsp;-&nbsp;'
+                            '<a href="#sql">sql</a>&nbsp;&nbsp;'
+                            '<br>')
+            else:
+                sys_index =('<br>&nbsp;&nbsp;&nbsp;<b>System ::</b>'
+                            '&nbsp;&nbsp;&nbsp;&nbsp;'
+                            '<a href="#disk">disks</a>&nbsp;-&nbsp;'
+                            '<a href="#memory">memory</a>&nbsp;-&nbsp;'
+                            '<a href="#mounts">mounts</a>&nbsp;&nbsp;'
+                            '<br>')
+
+            h_tml =[sys_index, "<hr>"]
+            sys_links.writelines(h_tml)
+            sys_links.close()
+
             tl = open(tail_file, 'w')
             tl.write('\n<a id="disk"></a><a href="#Top">Back to top</a><h2>'
                        ' Disk Usage: </h2>&nbsp;&nbsp;&nbsp;&nbsp;\n<pre>')
             tl.close()
+#            txt=('\n<a id="disk"></a><a href="#Top">Back to top</a><h2>'
+#                       ' Disk Usage: </h2>&nbsp;&nbsp;&nbsp;&nbsp;\n<pre>')
+#            tlwrite(txt)
             os.system("df -h >> %s" % tail_file)
             tl = open(tail_file, 'a')
             tl.write('</pre><hr>\n<a id="memory"></a><a href="#Top">Back to top'
@@ -320,6 +385,7 @@ class SqlBackup(SearchList):
             tl.write("</pre>")
             tl.close()
 
+
             # add debug extras to sqlbackup.html
             if self.sql_debug >= 4 :
                 tl = open(tail_file, 'a')
@@ -328,8 +394,10 @@ class SqlBackup(SearchList):
                            '<h2> Log snippet: </h2>&nbsp;&nbsp;&nbsp;&nbsp;\n'
                            '<pre>')
                 tl.close()
-                os.system("grep /var/log/syslog  -e sqlbackup | tail -n50 >> %s"
-                          % tail_file)
+                # sanitize the output. If we get a cheetahgenerator error referencing
+                # an #include we risk getting stuck in a loop, in a loop.
+                os.system("grep /var/log/syslog -e '#' -v|grep  -e 'sqlbackup'"
+                          "| tail -n50 >> %s"% tail_file)
 
                 tl = open(tail_file, 'a')
                 tl.write('</pre><hr>\n<a id="mysql"></a><a href="#Top">'
@@ -352,8 +420,8 @@ class SqlBackup(SearchList):
                 tl.write('</pre>\n')
                 tl.close()
         else:
-            all_file = "%s/alldumps.inc" % self.inc_dir
-            skp = open(all_file, 'a')
+            #all_file = "%s/alldumps.inc" % self.inc_dir
+            skp = open(all_file, 'w')
             skp.write("<p>Report generation is disabled in skin.conf</p>")
             skp.close()
             empty = open(tail_file, 'w')
@@ -362,23 +430,37 @@ class SqlBackup(SearchList):
             empty = open(links_file, 'w')
             empty.write("\n")
             empty.close()
+            empty = open(sys_file, 'w')
+            empty.write("\n")
+            empty.close()
 
 
         # and then the whole process's finishing time
         t2= time.time()
-        loginf("sqlbackup: Total time used in backups"
+        loginf("Total time used in backups "
                       "and report output: %.2f seconds" % (t2-t1))
 
 
 
     def report(self, inc_dir, carry_index, cmd, dump_file, data_base,
-               line_count, sql_name):
+               line_count, sql_name, start_loop):
             # Output for a report using templates
             global link_index
+            global strt_loop
             t3= time.time()
             inc_file = "%s/%s.inc" % (inc_dir, data_base)
             links_file = "%s/links.inc" % inc_dir
             all_file = "%s/alldumps.inc" % inc_dir
+
+            if start_loop <= 0:
+                loginf("1             DEBUG: start_loop starts as %s" % (start_loop))
+                strt_loop = 1
+                loginf("1             DEBUG: strt_loop is set to %s" % (strt_loop))
+                strt = open(all_file, 'w')
+                strt.write("\n")
+                strt.close()
+
+                #then all_files left blanked else roll on
 
             next_index = ('%s.<a href="#%s">%s</a>&nbsp;&nbsp;' % (
                           sql_name, data_base, data_base))
@@ -406,26 +488,27 @@ class SqlBackup(SearchList):
             os.system(my_tail)
 
             l_inks=open(links_file, 'w')
-            if self.sql_debug >= 4 :
-                sys_index =('<br>&nbsp;&nbsp;&nbsp;<b>System ::</b>'
-                            '&nbsp;&nbsp;&nbsp;&nbsp;'
-                            '<a href="#disk">disks</a>&nbsp;-&nbsp;'
-                            '<a href="#memory">memory</a>&nbsp;-&nbsp;'
-                            '<a href="#mounts">mounts</a>&nbsp;&nbsp;'
-                            '<b>DEBUG output :: </b>'
-                            '<a href="#logs">logs</a>&nbsp;-&nbsp;'
-                            '<a href="#mysql">mysql</a>&nbsp;-&nbsp;'
-                            '<a href="#sql">sql</a>&nbsp;&nbsp;'
-                            '<br>')
-            else:
-                sys_index =('<br>&nbsp;&nbsp;&nbsp;<b>System ::</b>'
-                            '&nbsp;&nbsp;&nbsp;&nbsp;'
-                            '<a href="#disk">disks</a>&nbsp;-&nbsp;'
-                            '<a href="#memory">memory</a>&nbsp;-&nbsp;'
-                            '<a href="#mounts">mounts</a>&nbsp;&nbsp;'
-                            '<br>')
+            #if self.sql_debug >= 4 :
+            #    sys_index =('<br>&nbsp;&nbsp;&nbsp;<b>System ::</b>'
+            #                '&nbsp;&nbsp;&nbsp;&nbsp;'
+            #                '<a href="#disk">disks</a>&nbsp;-&nbsp;'
+            #                '<a href="#memory">memory</a>&nbsp;-&nbsp;'
+            #                '<a href="#mounts">mounts</a>&nbsp;&nbsp;'
+            #                '<b>DEBUG output :: </b>'
+            #                '<a href="#logs">logs</a>&nbsp;-&nbsp;'
+            #                '<a href="#mysql">mysql</a>&nbsp;-&nbsp;'
+            #                '<a href="#sql">sql</a>&nbsp;&nbsp;'
+            #                '<br>')
+            #else:
+            #    sys_index =('<br>&nbsp;&nbsp;&nbsp;<b>System ::</b>'
+            #                '&nbsp;&nbsp;&nbsp;&nbsp;'
+            #                '<a href="#disk">disks</a>&nbsp;-&nbsp;'
+            #                '<a href="#memory">memory</a>&nbsp;-&nbsp;'
+            #                '<a href="#mounts">mounts</a>&nbsp;&nbsp;'
+            #                '<br>')
 
-            h_tml =[link_index, sys_index, "<hr>"]
+            #h_tml =[link_index, sys_index, "<hr>"]
+            h_tml =[link_index, "</br>"]
             l_inks.writelines(h_tml)
             l_inks.close()
 
@@ -438,7 +521,7 @@ class SqlBackup(SearchList):
                 t4= time.time() 
                 loginf("DEBUG: Created %s in %.2f secs" % (inc_file, t4-t3))
 
-            return link_index
+            return (link_index, strt_loop)
 
 
 
