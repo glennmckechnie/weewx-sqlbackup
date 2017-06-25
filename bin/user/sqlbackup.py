@@ -24,11 +24,6 @@ from weewx.wxengine import StdService
 from weewx.cheetahgenerator import SearchList
 from weeutil.weeutil import to_bool
 
-#all_file = "%s/alldumps.inc" % (self.inc_dir)
-#head_file = "%s/head.inc" % (self.inc_dir)
-#tail_file = "%s/tail.inc" % (self.inc_dir)
-#links_file = "%s/links.inc" % self.inc_dir
-
 def logmsg(level, msg):
     syslog.syslog(level, 'sqlbackup : %s' % msg)
 
@@ -40,8 +35,6 @@ def tlwrite(txt):
     tl.write(txt)
     tl.close()
 
-#            tl.write('\n<a id="disk"></a><a href="#Top">Back to top</a><h2>'
-#                       ' Disk Usage: </h2>&nbsp;&nbsp;&nbsp;&nbsp;\n<pre>')
 class SqlBackup(SearchList):
     """ Notes and WARNINGS
 
@@ -49,7 +42,7 @@ class SqlBackup(SearchList):
     weird things could happen. Report generation may be skipped.
 
     The idea is to instead select a small rolling window from the database (if
-    its a MySQL or  MariaDB) and dump this at each report_timing interval. We
+    its a MySQL or MariaDB) and dump this at each report_timing interval. We
     will use that as a partial backup.
     At restore time we'll then need to select some or all of the dump files, and
     stitch them together as appropriate.
@@ -131,64 +124,112 @@ class SqlBackup(SearchList):
         this addition. There are many options eg:- '5 1 * * *' ,  @daily,
         @weekly, @monthly, etc
 
-        self.user: mysql, mariadb user; defaults to weewx
-        self.host: mysql, mariadb database location; defaults to localhost
-        self.passwd: mysql, mariadb password; defaults to weewx
-        self.myd_base: mysql, mariadb database name; defaults to 'none'
-        self.d_base: sqlite database name; defaults to'none'
-        self.table: mysql, mariadb table to archive; defaults to none, which
-         means all'
-        self.mybup_dir: mysql, mariadb backup directory; defaults to 
-         '/var/backups/mysql' 
-        self.bup_dir: sqlite backup directory; defaults to '/var/backups/sql'
-        self.tp_eriod: mysql, mariadb; time period for dump; defaults to 86400
-         seconds (24hours)
-        self.tp_label: mysql, mariadb; text label to match above. Has meaning
-         to you!
-        self.html_root: location to store generated html files
-        self.dated_dir: optional string to append to self.xxx_dir. eg: 20171231
-         default is true
-        self.gen_report: optional html report, helps with quick status check.
-        self.inc_dir: location of .inc files used in html generation; defaults
-         to /tmp/sqlbackup. Needed for cheetah templates (see Seasons skin in
-          newskin branch or latest release)
         self.sql_debug: use to include additional info in logs, or optional html
          report. default is off, although the newly installed skin comes with it
          turned on.
          0 is off,
          2 is logging only (setting debug = 2 in weewx.conf will also work)
          4 includes it in the optional html report.
+
+        mysql, mariadb are interchangable. where mysql is mentioned, mariadb
+        also applies
+
+        self.user: mysql user; defaults to weewx.conf value. Can be overwritten
+         via skin.conf
+        self.passwd: mysql password; defaults to weewx.conf value. Can be
+        overwritten via skin.conf
+        self.host: mysql database location; defaults to weewx.conf value. Can be
+         overwritten via skin.conf.
+        self.myd_base: mysql database name; defaults to 'None'. Can be
+         overwritten via skin.con. Use skin.conf for multiple databases, space
+         seperated list.
+        self.d_base: sqlite database name; defaults to'None'. Can be overwritten
+         via skin.con. Use skin.conf for multiple databases, space seperated
+         list.
+        self.table: mysql table to archive; defaults to 'None' which means 'all'
+        self.mybup_dir: mysql backup directory; defaults to '/var/backups/mysql'
+        self.bup_dir: sqlite backup directory; defaults to '/var/backups/sql'
+        self.tp_eriod: mysql; time period for dump; defaults to 86400
+         seconds (24hours)
+        self.tp_label: mysql; text label to match above. This has meaning
+         to you.
+        self.html_root: location to store the generated html files. It's taken
+        from weewx.conf but can be overwritten via a skin.conf value.
+        self.dated_dir: optional string to append to self.xxx_dir. eg: 20171231
+         default is true.
+        self.gen_report: optional html report, helps with quick status check. Its
+         location is governed by HTML_ROOT in weewx.conf or html_root in 
+         skin.conf
+        self.inc_dir: location of .inc files used in html generation; defaults
+         to /tmp/sqlbackup. These are temporary files only , but are needed for
+         the cheetah templates (see Seasons skin in newskin branch or latest
+         release)
         """
-        # essentials specific to weewx, should be able to get some of them directly from weewx.conf?
-        self.user = self.generator.skin_dict['SqlBackup'].get('sql_user','weewx')
-        self.host = self.generator.skin_dict['SqlBackup'].get('sql_host','localhost')
-        self.passwd = self.generator.skin_dict['SqlBackup'].get('sql_pass','weewx')
+
+        t1 = time.time() # this process's start time
+
+        # local debug switch "2"==weewx.debug, "4" adds extra to html report page
+        # 5 is bordering on extreme (release testing)
+        self.sql_debug = int(self.generator.skin_dict['SqlBackup'].get('sql_debug','0'))
+
+        self.user = self.generator.skin_dict['SqlBackup'].get('sql_user')
+        if not self.user:
+            self.user = self.generator.config_dict['DatabaseTypes']['MySQL'].get('user')
+            if self.sql_debug >= 5 :
+                #loginf("5: weewx.conf user is  %s" % (self.user))
+                loginf("5: weewx.conf user was used")
+        self.passwd = self.generator.skin_dict['SqlBackup'].get('sql_pass')
+        if not self.passwd:
+            self.passwd = self.generator.config_dict['DatabaseTypes']['MySQL'].get('password')
+            if self.sql_debug >= 5 :
+                #loginf("5: weewx.conf passwd is  %s" % (self.passwd))
+                loginf("5: weewx.conf passwd was used")
+        self.host = self.generator.skin_dict['SqlBackup'].get('sql_host')
+        if not self.host:
+            self.host = self.generator.config_dict['DatabaseTypes']['MySQL'].get('host')
+            if self.sql_debug >= 5 :
+                loginf("5: weewx.conf host is  %s" % (self.host))
         self.myd_base = self.generator.skin_dict['SqlBackup'].get('mysql_database','')
         self.d_base = self.generator.skin_dict['SqlBackup'].get('sql_database','')
+        if not self.myd_base and not self.d_base:
+            defd_base = self.generator.config_dict['DataBindings']['wx_binding'].get('database')
+            if self.sql_debug >= 5 :
+                loginf("5: weewx.conf database is %s" % (defd_base))
+            if defd_base == 'archive_mysql':
+                self.myd_base = self.generator.config_dict['Databases'][defd_base].get('database_name')
+                if self.sql_debug >= 5 :
+                    loginf("5: so weewx.conf mysql database is %s" % (self.myd_base))
+            elif defd_base == 'archive_sqlite':
+                self.d_base = self.generator.config_dict['Databases'][defd_base].get('database_name')
+                if self.sql_debug >= 5 :
+                    loginf("5: so weewx.conf sqlite database is %s" % (self.d_base))
+            else:
+                pass
         self.table = self.generator.skin_dict['SqlBackup'].get('sql_table','')
         self.mybup_dir = self.generator.skin_dict['SqlBackup'].get('mysql_bup_dir','/var/backups/mysql')
         self.bup_dir = self.generator.skin_dict['SqlBackup'].get('sql_bup_dir','/var/backups/sql')
         self.tp_eriod = self.generator.skin_dict['SqlBackup'].get('sql_tperiod','86400')
         self.tp_label = self.generator.skin_dict['SqlBackup'].get('sql_tlabel','daily')
-        self.html_root = self.generator.skin_dict['SqlBackup'].get('html_root','/var/www/html/weewx')
+        self.html_root = self.generator.skin_dict['SqlBackup'].get('htmlroot','')
+        if not self.html_root:
+            self.html_root = self.generator.config_dict['StdReport'].get('HTML_ROOT')
+            if self.sql_debug >= 5 :
+                loginf("5: weewx.conf html_root is  %s" % (self.html_root))
         self.dated_dir = to_bool(self.generator.skin_dict['SqlBackup'].get('sql_dated_dir', True))
         self.gen_report = to_bool(self.generator.skin_dict['SqlBackup'].get('sql_gen_report', True))
         self.inc_dir = self.generator.skin_dict['SqlBackup'].get('inc_dir', '/tmp/sqlbackup')
-        # local debug switch "2"==weewx.debug, "4" adds extra to html report page
-        self.sql_debug = int(self.generator.skin_dict['SqlBackup'].get('sql_debug','0'))
 
-	loginf("sql_debug = %s" %self.sql_debug)
-	loginf("gen_report = %s" %self.gen_report)
-	loginf("mysqldata = %s" %self.myd_base)
-	loginf("sqldata = %s" %self.d_base)
+        if self.sql_debug >= 5 :
+            loginf("5: using sql_debug level of %s" %self.sql_debug)
+            loginf("5: generate report is %s" %self.gen_report)
+            loginf("5: mysql databases selected: %s" %self.myd_base)
+            loginf("5: sql databases selected: %s" %self.d_base)
 
         carry_index = '<hr><b>Databases :: </b>'
         start_loop = 0
 
-        t1 = time.time() # this process's start time
-
         # Do the housework first, we clean out all the *.inc 's now rather
-        # than later. It allows their content to be inspected between runs.
+        # than later. That allows their content to be inspected between runs.
         if os.path.exists(self.inc_dir):
             shutil.rmtree(self.inc_dir)
         if not os.path.exists(self.inc_dir):
@@ -273,24 +314,22 @@ class SqlBackup(SearchList):
                 f.close()
                 t6 = time.time() # this loops finishing  time
 
-                passwd = "XxXxX"
+                userXx = passXx = "XxXxX"
+                #passXx = self.passwd
+                #userXx = self.user
                 #cmd = "/usr/bin/mysqldump -u%s -p%s -h%s -q  %s %s -w\"dateTime>%s\" %s -R --triggers --single-transaction --skip-opt" %(
                 cmd = "/usr/bin/mysqldump -u%s -p%s -h%s -q  %s %s -w\"dateTime>%s\" %s --single-transaction --skip-opt" %(
-                    passwd, passwd, self.host, myd_base, self.table, past_time, self.ignore)
+                    userXx, passXx, self.host, myd_base, self.table, past_time, self.ignore)
                 if weewx.debug >= 2 or self.sql_debug >= 2:
                     loginf("DEBUG: %.2f secs to run %s" % ((t6-t5), cmd))
 
                 if self.gen_report:
                     line_count = "100"
                     sql_name = "mysql"
-                    loginf("0             DEBUG: start_loop starts as %s" % (start_loop))
                     self.report(self.inc_dir, carry_index, cmd,
                                 mydump_file, myd_base, line_count, sql_name, start_loop)
                     carry_index = link_index
-                    loginf("2             DEBUG: start_loop remains at %s" % (start_loop))
                     start_loop = strt_loop
-                    loginf("2             DEBUG: start_loop reset as %s" % (start_loop))
-
 
         if self.d_base:
             self.dbase = self.d_base.split()
@@ -321,13 +360,10 @@ class SqlBackup(SearchList):
                 if self.gen_report:
                     line_count = "20"
                     sql_name = "sql"
-                    loginf("3             DEBUG: start_loop starts as %s" % (start_loop))
                     self.report(self.inc_dir, carry_index, cmd, 
                                 dump_file, d_base, line_count, sql_name, start_loop)
                     carry_index = link_index
-                    loginf("3             DEBUG: start_loop remains as %s" % (start_loop))
                     start_loop = strt_loop
-                    loginf("3             DEBUG: start_loop resets as %s" % (start_loop))
 
         # complete the remainder of the report .inc's
         # we generate a time stamp regardless
@@ -366,9 +402,6 @@ class SqlBackup(SearchList):
             tl.write('\n<a id="disk"></a><a href="#Top">Back to top</a><h2>'
                        ' Disk Usage: </h2>&nbsp;&nbsp;&nbsp;&nbsp;\n<pre>')
             tl.close()
-#            txt=('\n<a id="disk"></a><a href="#Top">Back to top</a><h2>'
-#                       ' Disk Usage: </h2>&nbsp;&nbsp;&nbsp;&nbsp;\n<pre>')
-#            tlwrite(txt)
             os.system("df -h >> %s" % tail_file)
             tl = open(tail_file, 'a')
             tl.write('</pre><hr>\n<a id="memory"></a><a href="#Top">Back to top'
@@ -384,7 +417,6 @@ class SqlBackup(SearchList):
             tl = open(tail_file, 'a')
             tl.write("</pre>")
             tl.close()
-
 
             # add debug extras to sqlbackup.html
             if self.sql_debug >= 4 :
@@ -420,7 +452,6 @@ class SqlBackup(SearchList):
                 tl.write('</pre>\n')
                 tl.close()
         else:
-            #all_file = "%s/alldumps.inc" % self.inc_dir
             skp = open(all_file, 'w')
             skp.write("<p>Report generation is disabled in skin.conf</p>")
             skp.close()
@@ -434,12 +465,11 @@ class SqlBackup(SearchList):
             empty.write("\n")
             empty.close()
 
-
-        # and then the whole process's finishing time
+        # and then the whole process's finishing time, which will only appear
+        # in the system logs
         t2= time.time()
         loginf("Total time used in backups "
                       "and report output: %.2f seconds" % (t2-t1))
-
 
 
     def report(self, inc_dir, carry_index, cmd, dump_file, data_base,
@@ -453,19 +483,14 @@ class SqlBackup(SearchList):
             all_file = "%s/alldumps.inc" % inc_dir
 
             if start_loop <= 0:
-                loginf("1             DEBUG: start_loop starts as %s" % (start_loop))
                 strt_loop = 1
-                loginf("1             DEBUG: strt_loop is set to %s" % (strt_loop))
                 strt = open(all_file, 'w')
                 strt.write("\n")
                 strt.close()
 
-                #then all_files left blanked else roll on
-
             next_index = ('%s.<a href="#%s">%s</a>&nbsp;&nbsp;' % (
                           sql_name, data_base, data_base))
             link_index = carry_index + next_index
-
 
             if not os.path.exists(inc_dir):
                 os.makedirs(inc_dir)
@@ -488,26 +513,6 @@ class SqlBackup(SearchList):
             os.system(my_tail)
 
             l_inks=open(links_file, 'w')
-            #if self.sql_debug >= 4 :
-            #    sys_index =('<br>&nbsp;&nbsp;&nbsp;<b>System ::</b>'
-            #                '&nbsp;&nbsp;&nbsp;&nbsp;'
-            #                '<a href="#disk">disks</a>&nbsp;-&nbsp;'
-            #                '<a href="#memory">memory</a>&nbsp;-&nbsp;'
-            #                '<a href="#mounts">mounts</a>&nbsp;&nbsp;'
-            #                '<b>DEBUG output :: </b>'
-            #                '<a href="#logs">logs</a>&nbsp;-&nbsp;'
-            #                '<a href="#mysql">mysql</a>&nbsp;-&nbsp;'
-            #                '<a href="#sql">sql</a>&nbsp;&nbsp;'
-            #                '<br>')
-            #else:
-            #    sys_index =('<br>&nbsp;&nbsp;&nbsp;<b>System ::</b>'
-            #                '&nbsp;&nbsp;&nbsp;&nbsp;'
-            #                '<a href="#disk">disks</a>&nbsp;-&nbsp;'
-            #                '<a href="#memory">memory</a>&nbsp;-&nbsp;'
-            #                '<a href="#mounts">mounts</a>&nbsp;&nbsp;'
-            #                '<br>')
-
-            #h_tml =[link_index, sys_index, "<hr>"]
             h_tml =[link_index, "</br>"]
             l_inks.writelines(h_tml)
             l_inks.close()
