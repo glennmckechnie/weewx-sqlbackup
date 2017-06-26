@@ -31,7 +31,7 @@ def loginf(msg):
     logmsg(syslog.LOG_INFO, msg)
 
 def tlwrite(txt):
-    tl = open(tail_file, 'w')
+    tl = open(self.tail_file, 'w')
     tl.write(txt)
     tl.close()
 
@@ -235,17 +235,17 @@ class SqlBackup(SearchList):
         if not os.path.exists(self.inc_dir):
             os.makedirs(self.inc_dir)
 
-        all_file = "%s/alldumps.inc" % (self.inc_dir)
-        head_file = "%s/head.inc" % (self.inc_dir)
-        tail_file = "%s/tail.inc" % (self.inc_dir)
-        links_file = "%s/links.inc" % self.inc_dir
-        sys_file = "%s/syslinks.inc" % self.inc_dir
+        self.all_file = "%s/alldumps.inc" % (self.inc_dir)
+        self.head_file = "%s/head.inc" % (self.inc_dir)
+        self.tail_file = "%s/tail.inc" % (self.inc_dir)
+        self.links_file = "%s/links.inc" % self.inc_dir
+        self.sys_file = "%s/syslinks.inc" % self.inc_dir
 
-        chck = open(all_file, 'a')
+        chck = open(self.all_file, 'a')
         chck.write("<p><b>There's nothing to report.</b></p><p>Do you have any "
             "databases configured?</br> Check the config file (skin.conf)</p>")
         chck.close()
-        strt = open(links_file, 'w')
+        strt = open(self.links_file, 'w')
         strt.write(carry_index)
         strt.close()
 
@@ -368,13 +368,13 @@ class SqlBackup(SearchList):
         # complete the remainder of the report .inc's
         # we generate a time stamp regardless
         gen_time = time.strftime("%A %B %d, %Y at %H:%M")
-        hd = open(head_file, 'w')
+        hd = open(self.head_file, 'w')
         hd.write("<b> %s </b><br>\nIt started the capture from <b>%s</b>\n" % (
                     gen_time, readable_time))
         hd.close()
 
         if self.gen_report: # and not self.sql_debug == 0:
-            sys_links=open(sys_file, 'w')
+            sys_links=open(self.sys_file, 'w')
             if self.sql_debug >= 4 :
                 sys_index =('<br>&nbsp;&nbsp;&nbsp;<b>System ::</b>'
                             '&nbsp;&nbsp;&nbsp;&nbsp;'
@@ -398,29 +398,29 @@ class SqlBackup(SearchList):
             sys_links.writelines(h_tml)
             sys_links.close()
 
-            tl = open(tail_file, 'w')
+            tl = open(self.tail_file, 'w')
             tl.write('\n<a id="disk"></a><a href="#Top">Back to top</a><h2>'
                        ' Disk Usage: </h2>&nbsp;&nbsp;&nbsp;&nbsp;\n<pre>')
             tl.close()
-            os.system("df -h >> %s" % tail_file)
-            tl = open(tail_file, 'a')
+            os.system("df -h >> %s" % self.tail_file)
+            tl = open(self.tail_file, 'a')
             tl.write('</pre><hr>\n<a id="memory"></a><a href="#Top">Back to top'
                      '</a><h2> Memory Usage: </h2>&nbsp;&nbsp;&nbsp;&nbsp;\n<pre>')
             tl.close()
-            os.system("free -h >> %s" % tail_file)
-            tl = open(tail_file, 'a')
+            os.system("free -h >> %s" % self.tail_file)
+            tl = open(self.tail_file, 'a')
             tl.write('</pre><hr>\n<a id="mounts"></a><a href="#Top">Back to top'
                        '</a><h2> Mounted File Systems: </h2>&nbsp;&nbsp;&nbsp;'
                        '&nbsp;\n<pre>')
             tl.close()
-            os.system("mount >> %s" % tail_file)
-            tl = open(tail_file, 'a')
+            os.system("mount >> %s" % self.tail_file)
+            tl = open(self.tail_file, 'a')
             tl.write("</pre>")
             tl.close()
 
             # add debug extras to sqlbackup.html
             if self.sql_debug >= 4 :
-                tl = open(tail_file, 'a')
+                tl = open(self.tail_file, 'a')
                 tl.write('<hr>\n<h2> DEBUG output</h2>\n'
                            '<a id="logs"></a><a href="#Top">Back to top</a>'
                            '<h2> Log snippet: </h2>&nbsp;&nbsp;&nbsp;&nbsp;\n'
@@ -429,39 +429,39 @@ class SqlBackup(SearchList):
                 # sanitize the output. If we get a cheetahgenerator error referencing
                 # an #include we risk getting stuck in a loop, in a loop.
                 os.system("grep /var/log/syslog -e '#' -v|grep  -e 'sqlbackup'"
-                          "| tail -n50 >> %s"% tail_file)
+                          "| tail -n50 >> %s"% self.tail_file)
 
-                tl = open(tail_file, 'a')
+                tl = open(self.tail_file, 'a')
                 tl.write('</pre><hr>\n<a id="mysql"></a><a href="#Top">'
                          'Back to top</a>'
                          '<h2>MySQL files: </h2>&nbsp;&nbsp;&nbsp;&nbsp;\n'
                          '<pre>')
                 tl.close()
                 os.system("ls -gtr %s | tail -n10 >> %s" % (
-                           mydump_dir, tail_file))
+                           mydump_dir, self.tail_file))
 
-                tl = open(tail_file, 'a')
+                tl = open(self.tail_file, 'a')
                 tl.write('</pre><hr>'
                          '\n<a id="sql"></a><a href="#Top">Back to top</a>'
                          '<h2>sqlite files: </h2>&nbsp;&nbsp;&nbsp;&nbsp;\n'
                          '<pre>')
                 tl.close()
-                os.system("ls -gtr %s | tail -n10 >> %s" % (dump_dir,tail_file))
+                os.system("ls -gtr %s | tail -n10 >> %s" % (dump_dir,self.tail_file))
 
-                tl = open(tail_file, 'a')
+                tl = open(self.tail_file, 'a')
                 tl.write('</pre>\n')
                 tl.close()
         else:
-            skp = open(all_file, 'w')
+            skp = open(self.all_file, 'w')
             skp.write("<p>Report generation is disabled in skin.conf</p>")
             skp.close()
-            empty = open(tail_file, 'w')
+            empty = open(self.tail_file, 'w')
             empty.write("\n")
             empty.close()
-            empty = open(links_file, 'w')
+            empty = open(self.links_file, 'w')
             empty.write("\n")
             empty.close()
-            empty = open(sys_file, 'w')
+            empty = open(self.sys_file, 'w')
             empty.write("\n")
             empty.close()
 
@@ -479,12 +479,12 @@ class SqlBackup(SearchList):
             global strt_loop
             t3= time.time()
             inc_file = "%s/%s.inc" % (inc_dir, data_base)
-            links_file = "%s/links.inc" % inc_dir
-            all_file = "%s/alldumps.inc" % inc_dir
+            self.links_file = "%s/links.inc" % inc_dir
+            self.all_file = "%s/alldumps.inc" % inc_dir
 
             if start_loop <= 0:
                 strt_loop = 1
-                strt = open(all_file, 'w')
+                strt = open(self.all_file, 'w')
                 strt.write("\n")
                 strt.close()
 
@@ -512,13 +512,13 @@ class SqlBackup(SearchList):
             my_tail = "zcat %s | tail -n20 >> %s" % (dump_file, inc_file)
             os.system(my_tail)
 
-            l_inks=open(links_file, 'w')
+            l_inks=open(self.links_file, 'w')
             h_tml =[link_index, "</br>"]
             l_inks.writelines(h_tml)
             l_inks.close()
 
-            os.system("cat %s >> %s" % (inc_file, all_file))
-            all_lot = open(all_file, 'a')
+            os.system("cat %s >> %s" % (inc_file, self.all_file))
+            all_lot = open(self.all_file, 'a')
             all_lot.write("</pre>")
             all_lot.close()
 
