@@ -23,8 +23,6 @@
         <div>
            <!-- start sqlbackup source html -->
            This page shows a summary of the output from the sqlbackup that last ran on
-	   
-           #if $head_file
             #include $head_file
             <hr>
             #include $links_file
@@ -33,24 +31,25 @@
             #include $all_file
             <hr>
             #include $tail_file
-	   #else
-            Arfle garfle gloop
-	   #end if
-
-
            <!-- finish sqlbackup source html -->
           </div>
         </div>
 
     <p class="footnote">
+           <!-- start sqlbackup source variable test -->
     <!-- $inc_dir
-    $head_file
-    $table
-    $html_root
-    $sql_debug -->
+         $head_file
+         $links_file
+         $sys_file
+         $all_file
+         $tail_file
+        --> 
+    <!-- $table  $html_root  $sql_debug -->
+           <!-- finish sqlbackup source variable test -->
       This station uses an $station.hardware to generate data.
       This data is then collected and displayed by <a href="http://weewx.com/">weeWX</a>, an
       experimental weather software system written in Python.<br>
+      This skin is avaliable at github as <a href="https://github.com/glennmckechnie/weewx-sqlbackup">sqlbackup</a>
     </p>
 
 
