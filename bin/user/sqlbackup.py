@@ -81,11 +81,11 @@ class SqlBackup(SearchList):
     Keep it small and sensible and that should all remain true.
 
     Testing: BACK UP your database first - via other methods. (Okay, Truth is.
-    I've used this script by passing a suitable unix time string as the sql_tperiod
+    I've used this script by passing a suitable unix time string as the sql_period
     and have lived to tell the tale. I was able to put the pieces together
     again.)
     60*60*24*365*2
-    sql_tperiod = "63072000"
+    sql_period = "63072000"
     
     In short...
     Open skin.conf, modify the variables, turn on sql_debug - 2
@@ -146,12 +146,12 @@ class SqlBackup(SearchList):
         self.d_base: sqlite database name; defaults to'None'. Can be overwritten
          via skin.con. Use skin.conf for multiple databases, space seperated
          list.
-        self.table: mysql table to archive; defaults to 'None' which means 'all'
+        self.table: mysql table to dump; defaults to 'None' which means 'all'
         self.mybup_dir: mysql backup directory; defaults to '/var/backups/mysql'
         self.bup_dir: sqlite backup directory; defaults to '/var/backups/sql'
-        self.tp_eriod: mysql; time period for dump; defaults to 86400
+        self.t_period: mysql; time period for dump; defaults to 86400
          seconds (24hours)
-        self.tp_label: mysql; text label to match above. This has meaning
+        self.t_label: mysql; text label to match above. This has meaning
          to you.
         self.html_root: location to store the generated html files. It's taken
         from weewx.conf but can be overwritten via a skin.conf value.
@@ -218,8 +218,8 @@ class SqlBackup(SearchList):
         self.table = self.generator.skin_dict[skin_name].get('sql_table','')
         self.mybup_dir = self.generator.skin_dict[skin_name].get('mysql_bup_dir','/var/backups/mysql')
         self.bup_dir = self.generator.skin_dict[skin_name].get('sql_bup_dir','/var/backups/sql')
-        self.tp_eriod = self.generator.skin_dict[skin_name].get('sql_tperiod','86400')
-        self.tp_label = self.generator.skin_dict[skin_name].get('sql_tlabel','daily')
+        self.t_period = self.generator.skin_dict[skin_name].get('sql_period','86400')
+        self.t_label = self.generator.skin_dict[skin_name].get('sql_label','daily')
         # weewx.conf section first,
         self.html_root = self.generator.config_dict['StdReport'][skin_name].get('HTML_ROOT')
         if self.sql_debug >= 5 :
@@ -320,9 +320,9 @@ class SqlBackup(SearchList):
         file_stamp = time.strftime("%Y%m%d%H%M")
 
         # add 900 seconds to ensure data ovelaps between runs.
-        self.tp_eriod = int(self.tp_eriod) + int('900')
+        self.t_period = int(self.t_period) + int('900')
         # then for the dump process
-        past_time = int(time.time()) - int(self.tp_eriod)
+        past_time = int(time.time()) - int(self.t_period)
 
         readable_time = (datetime.datetime.fromtimestamp(past_time).strftime(
             '%Y-%m-%d %H:%M:%S'))
@@ -379,14 +379,16 @@ class SqlBackup(SearchList):
                     loginf("%s DEBUG:  mysql database is %s" % (skin_name, myd_base))
 
                 mydump_file = mydump_dir + "/%s-host.%s-%s-%s.gz"  % (
-                    myd_base, this_host, file_stamp, self.tp_label)
+                    myd_base, this_host, file_stamp, self.t_label)
                 #cmd = "/usr/bin/mysqldump -u%s -p%s -h%s -q  %s %s -w\"dateTime>%s\" %s -R --triggers --single-transaction --skip-opt" %(
                 cmd = "/usr/bin/mysqldump -u%s -p%s -h%s -q  %s %s -w\"dateTime>%s\" %s --single-transaction --skip-opt" %(
                        self.user, self.passwd, self.host, myd_base, self.table, past_time, self.ignore)
 
-                p1 = subprocess.Popen(cmd, stdout=subprocess.PIPE,
+                dumpcmd = subprocess.Popen(cmd, stdout=subprocess.PIPE,
                                       stderr=subprocess.STDOUT, shell=True)
-                dump_output = p1.communicate()[0]
+		#[2] for error info?
+                dump_output = dumpcmd.communicate()[0]
+		#stroutput = stdout.encode("utf-8").strip()
                 with gzip.open(mydump_file, 'wb') as f:
                     f.write(dump_output)
                 f.close()
@@ -422,12 +424,13 @@ class SqlBackup(SearchList):
                 if weewx.debug >= 2 or self.sql_debug >= 2:
                     loginf("%s DEBUG:  sql database is %s" % (skin_name, d_base))
                 dump_file = dump_dir + "/%s-host.%s-%s-%s.gz"  % (
-                               d_base, this_host, file_stamp, self.tp_label)
+                               d_base, this_host, file_stamp, self.t_label)
                 cmd = "echo '.dump %s' | sqlite3 /var/lib/weewx/%s.sdb" %(self.table, d_base)
 
-                p1 = subprocess.Popen(cmd, stdout=subprocess.PIPE,
+                dumpcmd = subprocess.Popen(cmd, stdout=subprocess.PIPE,
                                       stderr=subprocess.STDOUT, shell=True)
-                dump_output = p1.communicate()[0]
+                dump_output = dumpcmd.communicate()[0]
+		#stroutput = stdout.encode("utf-8").strip()
                 with gzip.open(dump_file, 'wb') as f:
                     f.write(dump_output)
                 f.close()
@@ -515,7 +518,7 @@ class SqlBackup(SearchList):
                 tl.write('</pre><hr>\n<a id="mysql"></a><a href="#Top">'
                          'Back to top</a>'
                          '<h2>MySQL files: </h2>&nbsp;&nbsp;&nbsp;&nbsp;\n'
-                         '<pre>')
+                         '<pre>\n%s\n\n' % mydump_dir)
                 tl.close()
                 os.system("ls -gtr %s | tail -n10 >> %s" % (
                            mydump_dir, self.tail_file))
@@ -524,7 +527,7 @@ class SqlBackup(SearchList):
                 tl.write('</pre><hr>'
                          '\n<a id="sql"></a><a href="#Top">Back to top</a>'
                          '<h2>sqlite files: </h2>&nbsp;&nbsp;&nbsp;&nbsp;\n'
-                         '<pre>')
+                         '<pre>\n%s\n\n' % dump_dir)
                 tl.close()
                 os.system("ls -gtr %s | tail -n10 >> %s" % (dump_dir,self.tail_file))
 
