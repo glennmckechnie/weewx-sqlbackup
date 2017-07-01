@@ -30,7 +30,13 @@ def logmsg(level, msg):
 def loginf(msg):
     logmsg(syslog.LOG_INFO, msg)
 
-def tlwrite(txt):
+def logerr(msg):
+    logmsg(syslog.LOG_ERR, msg)
+
+def logdbg(msg):
+    logmsg(syslog.LOG_DEBUG, msg)
+
+def tlwrite(txt): # unused
     tl = open(self.tail_file, 'w')
     tl.write(txt)
     tl.close()
@@ -250,6 +256,7 @@ class SqlBackup(SearchList):
         carry_index = '<hr><b>Databases :: </b>'
         start_loop = 0
         e = ''
+        cmd_err = ''
 
         #print "dd=%s" % self.generator.config_dict['WEEWX_ROOT']
         #print "de=%s" %self.generator.skin_dict['SKIN_ROOT']
@@ -380,38 +387,33 @@ class SqlBackup(SearchList):
                     loginf("%s DEBUG:  mysql database is %s" % (skin_name, myd_base))
                 mydump_file = mydump_dir + "/%s-host.%s-%s-%s.gz"  % (
                     myd_base, this_host, file_stamp, self.t_label)
-		# We pass a '>' and this requires shell=True which negates error catching.
-		# Hmmm - another way is ??
+                # We pass a '>' and this requires shell=True
                 #cmd = "mysqldump -u%s -p%s -h%s -q  %s %s -w\"dateTime>%s\" %s -R --triggers --single-transaction --skip-opt" %(
-                cmd = "mysqldum -u%s -p%s -h%s -q  %s %s -w'dateTime>%s' %s --single-transaction --skip-opt" %(
+                cmd = "mysqldump -u%s -p%s -h%s -q  %s %s -w'dateTime>%s' %s --single-transaction --skip-opt" %(
                        self.user, self.passwd, self.host, myd_base, self.table, past_time, self.ignore)
-                #try:
                 dumpcmd = subprocess.Popen(cmd, stdout=subprocess.PIPE,
                                       stderr=subprocess.PIPE, shell=True)
-                dump_output = dumpcmd.communicate()[0]
-                    #dumpoutput = dump_output.encode("utf-8").strip()
-                #except OSError, e:
-                #    if e.errno == errno.ENOENT:
-                #        loginf("%s : mysqldump can't be found (errno %d, \"%s\")" % (skin_name, e.errno, e.strerror))
-                #    raise
+                dump_output, dump_err = dumpcmd.communicate()
+                if dump_err:
+                    cmd_err("%s  ERROR : %s)" % (skin_name, dump_err))
+                    logerr(cmd_err)
                 with gzip.open(mydump_file, 'wb') as f:
                     f.write(dump_output)
                 f.close()
                 t6 = time.time() # this loops finishing  time
 
-                userXx = passXx = "XxXxX"
-                #passXx = self.passwd
-                #userXx = self.user
-                #cmd = "mysqldump -u%s -p%s -h%s -q  %s %s -w\"dateTime>%s\" %s -R --triggers --single-transaction --skip-opt" %(
-                cmd = "mysqldump -u%s -p%s -h%s -q  %s %s -w\"dateTime>%s\" %s --single-transaction --skip-opt" %(
-                    userXx, passXx, self.host, myd_base, self.table, past_time, self.ignore)
+                # obfuscate for logs
+                log_cmd = cmd.replace(self.user ,"XxXxX" )
+                log_cmd = log_cmd.replace(self.passwd ,"XxXxX" )
                 if weewx.debug >= 2 or self.sql_debug >= 2:
-                    loginf("%s DEBUG: %.2f secs to run %s" % (skin_name, (t6-t5), cmd))
+                    loginf("%s DEBUG: %.2f secs to run %s" % (skin_name, (t6-t5), log_cmd))
 
                 if self.gen_report:
                     line_count = "100"
                     sql_name = "mysql"
-                    self.report(self.inc_dir, carry_index, cmd,
+                    log_cmd = ("%s \n\n %s \n" % (log_cmd, cmd_err))
+                    cmd_err = ''
+                    self.report(self.inc_dir, carry_index, log_cmd,
                                 mydump_file, myd_base, line_count, sql_name, start_loop)
                     carry_index = link_index
                     start_loop = strt_loop
@@ -430,12 +432,16 @@ class SqlBackup(SearchList):
                     loginf("%s DEBUG:  sql database is %s" % (skin_name, d_base))
                 dump_file = dump_dir + "/%s-host.%s-%s-%s.gz"  % (
                                d_base, this_host, file_stamp, self.t_label)
+                # We pass a '|' and this also equires shell=True
                 cmd = "echo '.dump %s' | sqlite3 /var/lib/weewx/%s.sdb" %(self.table, d_base)
 
                 dumpcmd = subprocess.Popen(cmd, stdout=subprocess.PIPE,
-                                      stderr=subprocess.STDOUT, shell=True)
-                dump_output = dumpcmd.communicate()[0]
+                                      stderr=subprocess.PIPE, shell=True)
+                dump_output, dump_err = dumpcmd.communicate()
                 #dumpoutput = dump_output.encode("utf-8").strip()
+                if dump_err:
+                    cmd_err = ("%s  ERROR : %s)" % (skin_name, dump_err))
+                    logerr(cmd_err)
                 with gzip.open(dump_file, 'wb') as f:
                     f.write(dump_output)
                 f.close()
@@ -447,7 +453,9 @@ class SqlBackup(SearchList):
                 if self.gen_report:
                     line_count = "20"
                     sql_name = "sql"
-                    self.report(self.inc_dir, carry_index, cmd,
+                    log_cmd = ("%s \n\n %s \n" % (cmd, cmd_err))
+                    cmd_err = ''
+                    self.report(self.inc_dir, carry_index, log_cmd,
                                 dump_file, d_base, line_count, sql_name, start_loop)
                     carry_index = link_index
                     start_loop = strt_loop
@@ -562,7 +570,7 @@ class SqlBackup(SearchList):
                       "and report output: %.2f seconds" % (skin_name, (t2-t1)))
 
 
-    def report(self, inc_dir, carry_index, cmd, dump_file, data_base,
+    def report(self, inc_dir, carry_index, log_cmd, dump_file, data_base,
                line_count, sql_name, start_loop):
             # If we're reporting then we need to build the text output as we loop
             # through the databases. We can do more than one when we specify a
@@ -597,7 +605,7 @@ class SqlBackup(SearchList):
             inc.write('&nbsp;&nbsp;&nbsp;&nbsp;<a id="%s"></a><a href='
                       '"#Top">Back to top</a>\n<h2>Extract from the %s '
                       'Database dump file: </h2>\n<pre>%s\n\n\n' % (
-                      data_base, data_base, cmd))
+                      data_base, data_base, log_cmd))
             # broken pipe error from wee_reports appears harmless & is due to
             # head truncating the operation.
             inc.close()
