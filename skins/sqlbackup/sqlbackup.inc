@@ -1,6 +1,8 @@
 ## identifier for standard skin
 ## Copyright Tom Keffer, Matthew Wall
 ## See LICENSE.txt for your rights
+## This version is for use with the sqlbackup.html.tmpl
+
 #errorCatcher Echo
 
 <div id='sqlbackup_widget' class="widget">

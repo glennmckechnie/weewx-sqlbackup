@@ -326,7 +326,7 @@ That's an outline of the process. Names have obviously been changed to suit. Twe
 
 #### A psuedo script
 
-The following is a psuedo bash script - it will work as is, but you'll need to be familiar with vim and the process as outlined above, re: headers and footers
+The following is a psuedo bash script - it will work as is (after changing names!) but you'll need to be familiar with vim and the process as outlined above, re: headers and footers
 
 ```
 #!/bin/sh

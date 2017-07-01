@@ -134,7 +134,7 @@ report_timing = '@daily'
 # First time? Need a refresher? There's a README.md file in the skins directory
 # for detailed instructions, or sqlbackupREADME.html on your weewx server.
 
-[sqlbackup]  # This section heading is all lower case to enable report duplication.
+[sqlbackup]  # This section heading is lower case to enable report duplication.
 
         #sql_user = "your_user_if_different_to_weewx.conf"
         #sql_host = "localhost_is_the_default"
@@ -311,7 +311,7 @@ quit;</code></pre>
 vim -d new_file.sql dumptestnew-compare.sql</code></pre>
 <p>That's an outline of the process. Names have obviously been changed to suit. Tweak to suit.</p>
 <h4 id="psuedo-script">A psuedo script</h4><a href="#Top">Back to top</a>
-<p>The following is a psuedo bash script - it will work as is, but you'll need to be familiar with vim and the process as outlined above, re: headers and footers</p>
+<p>The following is a psuedo bash script - it will work as is (after changing names!) but you'll need to be familiar with vim and the process as outlined above, re: headers and footers</p>
 <pre><code>
 #!/bin/sh
 
