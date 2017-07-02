@@ -267,6 +267,9 @@ a:hover {
     height: 350px;
     margin-top: 4px;
 }
+pre.gry {
+    background-color: #efefef;
+}
 
 
 @media (max-width:800px) {

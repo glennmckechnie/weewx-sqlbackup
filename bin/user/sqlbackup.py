@@ -469,18 +469,19 @@ class SqlBackup(SearchList):
 
             tl = open(self.tail_file, 'w')
             tl.write('\n<a id="disk"></a><a href="#Top">Back to top</a><h2>'
-                       ' Disk Usage: </h2>&nbsp;&nbsp;&nbsp;&nbsp;\n<pre>')
+                       ' Disk Usage: </h2>&nbsp;&nbsp;&nbsp;&nbsp;\n<pre class="gry">')
             tl.close()
             os.system("df -h >> %s" % self.tail_file)
             tl = open(self.tail_file, 'a')
             tl.write('</pre><hr>\n<a id="memory"></a><a href="#Top">Back to top'
-                     '</a><h2> Memory Usage: </h2>&nbsp;&nbsp;&nbsp;&nbsp;\n<pre>')
+                     '</a><h2> Memory Usage: </h2>&nbsp;&nbsp;&nbsp;&nbsp;\n'
+		     '<pre class="gry">')
             tl.close()
             os.system("free -h >> %s" % self.tail_file)
             tl = open(self.tail_file, 'a')
             tl.write('</pre><hr>\n<a id="mounts"></a><a href="#Top">Back to top'
                        '</a><h2> Mounted File Systems: </h2>&nbsp;&nbsp;&nbsp;'
-                       '&nbsp;\n<pre>')
+                       '&nbsp;\n<pre class="gry">')
             tl.close()
             os.system("mount >> %s" % self.tail_file)
             tl = open(self.tail_file, 'a')
@@ -493,7 +494,7 @@ class SqlBackup(SearchList):
                 tl.write('<hr>\n<h2> DEBUG output</h2>\n'
                            '<a id="logs"></a><a href="#Top">Back to top</a>'
                            '<h2> Log snippet: </h2>&nbsp;&nbsp;&nbsp;&nbsp;\n'
-                           '<pre>')
+                           '<pre class="gry">')
                 tl.close()
                 # sanitize the output. If we get a cheetahgenerator error referencing
                 # an #include we risk getting stuck in a loop, in a loop.
@@ -504,7 +505,7 @@ class SqlBackup(SearchList):
                 tl.write('</pre><hr>\n<a id="mysql"></a><a href="#Top">'
                          'Back to top</a>'
                          '<h2>MySQL files: </h2>&nbsp;&nbsp;&nbsp;&nbsp;\n'
-                         '<pre>\n%s\n\n' % mydump_dir)
+                         '<pre class="gry">\n%s\n\n' % mydump_dir)
                 tl.close()
                 os.system("ls -gtr %s | tail -n10 >> %s" % (
                            mydump_dir, self.tail_file))
@@ -513,7 +514,7 @@ class SqlBackup(SearchList):
                 tl.write('</pre><hr>'
                          '\n<a id="sql"></a><a href="#Top">Back to top</a>'
                          '<h2>sqlite files: </h2>&nbsp;&nbsp;&nbsp;&nbsp;\n'
-                         '<pre>\n%s\n\n' % dump_dir)
+                         '<pre class="gry">\n%s\n\n' % dump_dir)
                 tl.close()
                 os.system("ls -gtr %s | tail -n10 >> %s" % (dump_dir,self.tail_file))
 
@@ -577,7 +578,7 @@ class SqlBackup(SearchList):
             inc = open(inc_file, 'w')
             inc.write('&nbsp;&nbsp;&nbsp;&nbsp;<a id="%s"></a><a href='
                       '"#Top">Back to top</a>\n<h2>Extract from the %s '
-                      'Database dump file: </h2>\n<pre>%s\n\n\n' % (
+                      'Database dump file: </h2>\n<pre class="gry">%s\n\n\n' % (
                       data_base, data_base, log_cmd))
             # broken pipe error from wee_reports appears harmless & is due to
             # head truncating the operation.
