@@ -36,7 +36,7 @@ With the variation in weeWX setups, the only way to know how it will work for yo
 
    * The default is to generate reports - sqlbackup.html.
 
-   * If you're not using the newskin branch of weeWX - Seasons, then configure the sqlbackup.html.tmpl etc. to suit. (TODO:  This area needs refining.)
+   * If you're not using the newskin branch of weeWX - Seasons, then configure the sqlbackup.html.tmpl etc. to suit.
 
 3 restart weewx:
 
@@ -391,5 +391,60 @@ or
 
     09:22 AM $ echo 'pragma integrity_check;' | sqlite3 pmon.sdb
     ok
+### Setting up the report pages
 
-That's it. Done. 
+The report page is optional but recommended. At the very least generate and use it while setting up the skin. It's intended to give a quick overview of what happened during each run.
+An extract of the .sql capture is displayed, the command syntax used, and any errors that occured with that system command. The sql extract shows the start and finish of the file so you have an idea of what the file contains and therefore what the command generated. If the dump failed late in the capture, it will often show something to that affect at the end of the file. The mysql extract shows the first 100 lines and last 20. The sqlite shows the first 20 and the last 20.
+
+The report was written with the Seasons skin in mind (ie: the newskin branch at github/weewx) and uses the seasons.css file. It can be adapted to suit any other skin by simply including the #includes as noted within sqlbackup.html.tmpl.
+
+The sqlbackup/sqlbackupREADME.html is a html version of the github README.md and is included to give some background and an example / outline of what to do with the resulting files. It's not meant to be a one stop HowTo. You'll need to do some further reading and attempt a few "restores" well before the time comes that you'll actually need to.
+
+### Multiple databases, multiple skins
+
+The default setup of this skin is to backup the main weewx database. It should do that 'out of the box'.
+If you modify the database stanzas it will ignore the default behaviour and do what you ask. A space seperated list will allow you to do each of those databases. If you specify mysql_database and sql_database it will bow down and do those too, what ever you say goes. If it doesn't get up again you may want to rethink that strategy!
+Maybe you just want the timing of those backups to be different? If so consider using multiple skins.
+
+This skin can be duplicated if you want to split the backups.
+You may want to do this if you have multiple databases and don't want the performance hit of doing them all at once. It may also be because you want to treat them differently. Your main weewx database has a 48 hour snapshot taken daily, then a monthly snapshot taken... monthly? if only because you hate the idea of stitching all the smaller ones together again. Your mesoraw weekly, at some other time, for some other reason, etc.
+
+You'll need to do this skin duplication process, manually.
+
+
+    cd skins
+    cp -r sqlbackup sqlbackupweek
+
+Open the weewx/weewx.conf file and duplicate the sqlbackup entry there, and change as required.
+
+```
+   [StdReport]
+   [...]
+       #original entry
+       [[sqlbackup]]
+            HTML_ROOT = /var/www/html/weewx/sqlbackup
+            skin = sqlbackup
+       # 2nd skin
+       [[sqlbackupweek]]
+            HTML_ROOT = /var/www/html/weewx/sqlbackupweek
+            skin = sqlbackupweek
+```
+
+Open the new directory, skin/sqlbackupweek and edit the skin.conf within. Change the report_timing stanza and the section heading
+
+```
+# Report timing: http://www.weewx.com/docs/customizing.htm#customizing_gen_time
+#
+# 2 minutes past midnight, on Monday. 2 minutes past the hour may prevent a possible clash with  @daily or @weekly.
+# Monday ensures it.
+report_timing = '2 * * * 1'
+
+#[...]
+
+#[sqlbackup] # This section heading is all lower case to enable skin duplication.
+[sqlbackupweek] # This section heading is all lower case to enable skin duplication.
+
+#sql_user = "your_user_if_different_to_weewx.conf"
+```
+
+That's it. You should be good to go. Tread lightly. 
