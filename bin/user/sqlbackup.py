@@ -124,11 +124,11 @@ class SqlBackup(SearchList):
         This allows them to be changed on the fly - while weewx is running, so
         changing these values in the skin.conf file will affect the next
         report run. This makes it very easy to manipulate - databases, timings
-        etc.
+        etc. while setting up the skin. No need to restart weewx.
 
         report_timing: This is an essential. See the weewx documentation for the
         full description on this addition. There are many options
-        eg:- '5 1 * * *' ,  @daily, @weekly, @monthly, etc
+        eg:- '2 * * * 1' ,  @daily, @weekly, @monthly, etc
 
         self.sql_debug: Used to include additional info in logs, or optional
          html report. default is off, although the newly installed skin comes
@@ -138,7 +138,7 @@ class SqlBackup(SearchList):
          4 includes the above info in the optional html report.
          5 is bordering on absurd (it's used for release testing.)
 
-        mysql, mariadb are interchangable. where mysql is mentioned, mariadb
+        mysql, mariadb are interchangable. Where mysql is mentioned, mariadb
         also applies
 
         self.user: mysql user; defaults to weewx.conf value. Can be overwritten
@@ -153,26 +153,21 @@ class SqlBackup(SearchList):
          database. Supplying a value other than none in skin.conf will override
          that behaviour. This is useful to backup multiple databases using a space
          seperated list.
-        self.table: mysql table to dump; defaults to 'None' which means 'all'
-         I can't decide if archive should be the default method - currently it's
-         optional, but strongly suggested.
+        self.table: mysql / sqlite tables to dump; This defaults to 'archive'.
+        Use '' to specify 'all' tables.
         self.mybup_dir: mysql backup directory; defaults to '/var/backups/mysql'
         self.bup_dir: sqlite backup directory; defaults to '/var/backups/sql'
         self.t_period: mysql; time period for dump; defaults to 86400
          seconds (24hours)
         self.t_label: mysql; text label to match above. This has meaning
          to you.
-        self.html_root: location to store the generated html files. Precedence is
-         the [sqlbackup] section in weewx.conf. Next is the skin/skin.conf. The
-         ultimate fallback is to use the global HTML_ROOT under [StdReport] in
-         weewx.conf
         self.dated_dir: optional string to append to self.xxx_dir. It will be of
          the form 20171231 The default is true. Useful if backups are taken often
          Possibly not so useful if only occasional.
         self.gen_report: optional html report, helps with quick status check and
          is the only way to catch any errors - std output is directed to the
          bup_file so thats where they are found. The report shows enough to
-         identify these. Its location is governed by self.html_root above.
+         identify these.
         self.inc_dir: location of .inc files used in html generation; defaults
          to /tmp/sqlbackup. These are temporary files only , but are needed for
          the cheetah templates (see Seasons skin in newskin branch or latest
@@ -191,6 +186,7 @@ class SqlBackup(SearchList):
         # skin_name also allows log messages to  reflect this skin re-use
         global skin_name
         skin_name =  self.generator.skin_dict['skin']
+        self.skin_name = skin_name # for export to the template / html
 
         # local debug switch "2" also = weewx.debug, "4" adds extra to html report page
         # 5 is bordering on absurd (used for release testing)
@@ -220,34 +216,21 @@ class SqlBackup(SearchList):
                 self.d_base = self.generator.config_dict['Databases'][defd_base].get('database_name')
                 if self.sql_debug >= 5 :
                     loginf("%s 5:3 so weewx.conf sqlite database is %s" % (skin_name, self.d_base))
-        self.table = self.generator.skin_dict[skin_name].get('sql_table','')
+        self.table = self.generator.skin_dict[skin_name].get('sql_table','archive')
         self.mybup_dir = self.generator.skin_dict[skin_name].get('mysql_bup_dir','/var/backups/mysql')
         self.bup_dir = self.generator.skin_dict[skin_name].get('sql_bup_dir','/var/backups/sql')
         self.t_period = self.generator.skin_dict[skin_name].get('sql_period','86400')
         self.t_label = self.generator.skin_dict[skin_name].get('sql_label','daily')
-        # weewx.conf skin [section] first,
-        self.html_root = self.generator.config_dict['StdReport'][skin_name].get('HTML_ROOT')
-        if self.sql_debug >= 5 :
-            loginf("%s 5:1 weewx.conf [skinname]: HTML_ROOT is  %s" % (skin_name, self.html_root))
-        if not self.html_root:  # try the skin/skin.conf,
-            self.html_root = self.generator.skin_dict[skin_name].get('html_root')
-            if self.sql_debug >= 5 :
-                loginf("%s 5:2 skin/skin.conf: html_root is  %s" % (skin_name, self.html_root))
-        if not self.html_root:  # otherwise use weewx.conf global which will always be there
-            self.html_root = self.generator.config_dict['StdReport'].get('HTML_ROOT')
-            if self.sql_debug >= 5 :
-                loginf("%s 5:3 weewx.conf: HTML_ROOT is  %s" % (skin_name, self.html_root))
         self.dated_dir = to_bool(self.generator.skin_dict[skin_name].get('sql_dated_dir', True))
         self.gen_report = to_bool(self.generator.skin_dict[skin_name].get('sql_gen_report', True))
         self.inc_dir = self.generator.skin_dict[skin_name].get('inc_dir', '/tmp/sqlbackup')
 
-        if self.sql_debug >= 5 :
+        if self.sql_debug >= 5 : # sanity check for releases - safely ignored!
             #loginf("%s 5: weewx.conf user is  %s" % (skin_name, self.user))
             loginf("%s 5: weewx.conf user was used" % skin_name)
             #loginf("%s 5: weewx.conf passwd is  %s" % (skin_name, self.passwd))
             loginf("%s 5: weewx.conf passwd was used" % skin_name)
             loginf("%s 5: weewx.conf host is  %s" % (skin_name, self.host))
-            loginf("%s 5: weewx.conf fallback html_root is  %s" % (skin_name, self.html_root))
             loginf("%s 5: using sql_debug level of %s" % (skin_name, self.sql_debug))
             loginf("%s 5: generate report is %s" % (skin_name, self.gen_report))
             loginf("%s 5: mysql databases selected: %s" % (skin_name, self.myd_base))
@@ -258,11 +241,6 @@ class SqlBackup(SearchList):
         e = ''
         cmd_err = ''
 
-        #print "dd=%s" % self.generator.config_dict['WEEWX_ROOT']
-        #print "de=%s" %self.generator.skin_dict['SKIN_ROOT']
-        #print "df=%s" % self.generator.skin_dict['skin']
-
-        #if self.gen_report:
         # Strictly speaking. If we're not generating reports then the following is redundant
         # but we''ll leave the structure in place as we do generate the report page, with a
         # message saying we're not generating reports!
@@ -286,9 +264,6 @@ class SqlBackup(SearchList):
                 loginf("%s: ERR  %s" % (skin_name, e))
                 return
 
-        #self.sub_dir=(self.html_root.split((self.generator.config_dict['StdReport'].get('HTML_ROOT')), 1).pop())
-        #loginf("%s 6:  html_root sub_dir is %s/" % (skin_name, self.sub_dir))
-
         self.all_file = "%s/alldumps.inc" % (self.inc_dir)
         self.head_file = "%s/head.inc" % (self.inc_dir)
         self.tail_file = "%s/tail.inc" % (self.inc_dir)
@@ -305,6 +280,7 @@ class SqlBackup(SearchList):
         chck.close()
 
         # start with a no report message. If we do generate reports we'll overwrite it.
+        # This is probably now redundant as we pick up the default database.
         chck = open(self.all_file, 'a')
         chck.write("<p><b>There's nothing to report.</b></p><p>Do you have any "
              "databases configured?</br> Check the config file (skin.conf)</p>")
@@ -319,10 +295,7 @@ class SqlBackup(SearchList):
         strt.write(carry_index)
         strt.close()
 
-        #sys.exit()
-
         # Setup for the dump process's
-
 
         this_host = os.uname()[1]
         file_stamp = time.strftime("%Y%m%d%H%M")
@@ -375,9 +348,9 @@ class SqlBackup(SearchList):
                 myd_base = self.mydbase[step]
                 # Because we use the  "--where..." clause, we run into trouble when
                 # dumping all tables so we use "--ignore..."  to prevent an incomplete
-                # dump, which is because there is no dateTime in the metadata table.
+                # dump. This is because there is no dateTime in the metadata table.
                 # And thankfully, this is silently ignored if there is no table of this name;
-                # for databases such as mesoraw
+                # for databases such as mesoraw and sqlite3
                 if len(self.table) < 1:
                     self.ignore = "--ignore-table=%s.archive_day__metadata" % myd_base
                     loginf("%s DEBUG: ALL tables specified,including option %s" % (skin_name, self.ignore))
@@ -389,13 +362,13 @@ class SqlBackup(SearchList):
                     myd_base, this_host, file_stamp, self.t_label)
                 # We pass a '>' and this requires shell=True
                 #cmd = "mysqldump -u%s -p%s -h%s -q  %s %s -w\"dateTime>%s\" %s -R --triggers --single-transaction --skip-opt" %(
-                cmd = "mysqldump -u%s -p%s -h%s -q  %s %s -w'dateTime>%s' %s --single-transaction --skip-opt" %(
+                cmd = "mysqldump -u%s -p%s -h%s -q  %s %s -w\"dateTime>%s\" %s --single-transaction --skip-opt" %(
                        self.user, self.passwd, self.host, myd_base, self.table, past_time, self.ignore)
                 dumpcmd = subprocess.Popen(cmd, stdout=subprocess.PIPE,
                                       stderr=subprocess.PIPE, shell=True)
                 dump_output, dump_err = dumpcmd.communicate()
                 if dump_err:
-                    cmd_err("%s  ERROR : %s)" % (skin_name, dump_err))
+                    cmd_err = ("%s  ERROR : %s)" % (skin_name, dump_err))
                     logerr(cmd_err)
                 with gzip.open(mydump_file, 'wb') as f:
                     f.write(dump_output)
@@ -548,7 +521,7 @@ class SqlBackup(SearchList):
                 tl.write('</pre>\n')
                 tl.close()
 
-        # or else: we're not reporting. stating that & nullifying
+        # or else: we're not reporting. state that & nullify .inc's
         else:
             skp = open(self.all_file, 'w')
             skp.write("<p>Report generation is disabled in skin.conf</p>")
@@ -566,7 +539,7 @@ class SqlBackup(SearchList):
         # and then the whole process's finishing time, which will only appear
         # in the system logs
         t2= time.time()
-        loginf("%s Total time used in backups "
+        loginf("%s: Total time used in backups "
                       "and report output: %.2f seconds" % (skin_name, (t2-t1)))
 
 
