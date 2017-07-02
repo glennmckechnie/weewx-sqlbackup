@@ -2,11 +2,9 @@
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en">
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    <meta http-equiv="refresh" content="900">
     <title>WeeWX SQLBackup README</title>
     <link rel="icon" type="image/png" href="favicon.ico" />
-    <link rel="stylesheet" type="text/css" href="standard.css"/>
-    <script type="text/javascript" src="standard.js"></script>
+    <link rel="stylesheet" type="text/css" href="sqlbackup.css"/>
   </head>
 
   <body>
@@ -17,7 +15,7 @@
          </div>
          <div id="rss_link"><a href="rss.xml">RSS</a></div>
        </div>
-       <p><a href="index.html">&#10096; Current Conditions</a>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href="sqlbackup.html">Back to SQLBackup stats&#10095;</a></p>
+       <p><a href="../index.html">&#10096; Current Conditions</a>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href="sqlbackup.html">Back to SQLBackup stats&#10095;</a></p>
       <div>
            <!-- start sqlbackup source html -->
 <hr>
@@ -25,14 +23,16 @@
 &nbsp;<a href="#notes-for-mysql-mariadb-database">Notes for MySQL (MariaDB) database</a><br />
 &nbsp;&nbsp;&nbsp;&nbsp;<a href="#method-1">Full dump: Method 1</a><br />
 &nbsp;&nbsp;&nbsp;&nbsp;<a href="#method-2">Full dump: Method 2</a><br />
-&nbsp;&nbsp;&nbsp;&nbsp;<a href="#configuring-partial-dump">Configuring the ongoing,  partial dumps</a><br />
+&nbsp;&nbsp;&nbsp;&nbsp;<a href="#configuring-partial-dump">Configuring: skin.conf</a><br />
 &nbsp;&nbsp;&nbsp;&nbsp;<a href="#working-with-the-dump-files">Working with the MySQL dump files</a><br />
 &nbsp;&nbsp;&nbsp;&nbsp;<a href="#to-restore-using-more-than-one-file...">To restore using more than one file...</a><br />
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href="#psuedo-script">A psuedo script</a><br />
 &nbsp;<a href="#notes-for-sqlite-.sdb-databases">Notes for sqlite (.sdb) databases</a><br />
+&nbsp;<a href="#setting-up-the-report-pages">Setting up the report pages</a><br />
+&nbsp;<a href="#multiple-skins">Multiple databases, multiple skins</a><br />
 <hr>
-<h2 id="sqlbackup-readme">SQLBackup README</h2><a href="#Top">Back to top</a>
-<p>This skin (<a href="https://github.com/glennmckechnie/weewx-sqlbackup">sqlbackup</a>) uses a Search List Extension (SLE) of the same name to call mysqldump and/or sqlite to dump data from the weeWX database.<br /> If it's MySQL (MariaDB) then it will dump a user specified timeframe; if it's sqlite then it will dump all of it. The default option in both cases is to only dump the archive tables.<br />It will do this at regular intervals as specified by the <a href="http://www.weewx.com/docs/customizing.htm#customizing_gen_time">report_timing</a> feature of weeWX.</p>
+<h2 id="sqlbackup-readme">SQLBackup README</h2>
+<p>This skin (<a href="https://github.com/glennmckechnie/weewx-sqlbackup">sqlbackup</a>) uses a Search List Extension (SLE) of the same name to call mysqldump and/or sqlite to dump data from the weeWX database.<br /> If it's MySQL (MariaDB) then it will dump a user specified timeframe; if it's sqlite then it will dump all of it. The suggested option for both cases is to only dump the archive tables.<br />It will do this at regular intervals as specified by the <a href="http://www.weewx.com/docs/customizing.htm#customizing_gen_time">report_timing</a> feature of weeWX.</p>
 <p>If you dump the whole database, and it's large, you can interfere with weeWX's operation and odd things may start to happen. This will depend on your CPU, database size, weeWX setup, maybe even the weather!<br />
 In most cases this probably won't matter too much and you'll just get a message about skipping reports. If we lock weeWX out of its database for too long though, the weird and wonderful may start to occur, so it's best we don't push it too far.
 </p>
@@ -51,7 +51,7 @@ Because this has since expanded to incorporate sqlite databases, where it captur
   <li>Check that the defaults are correct for your setup</li>
   <li>In particular, check the backup directory (xxsql_bup_dir) paths. They will be created on the first run.</li>
   <li>The default is to generate reports - sqlbackup.html</li>
-  <li>If you're not using the newskin branch of weeWX - Seasons, then configure the *.html.tmpl to suit. (This area needs refining.)</li>
+  <li>The templates are intended for the newskin branch of weeWX - Seasons. The *.html.tmpl will need tweaking to suit others. (This area does needs refining.)</li>
  </ul>
  <br />
 <li>Restart weewx:
@@ -104,9 +104,9 @@ Sat  2 Jan 18:35:00 AEDT 2016
 
 <p>Another aside, it took 7 hours on a quad-core AMD A8-5600K to re-instate that database (1 minute weewx archive_interval). There's something to be said for doing this on a (semi-)regular basis, and with small dump files.</p>
 
-<h3><a id="configuring-partial-dump">Configuring the ongoing, partial dumps</a></h3><a href="#Top">Back to top</a>
+<h3><a id="configuring-partial-dump">Configuring: skin.conf</a></h3><a href="#Top">Back to top</a>
 
-<p>The skin.conf file may appear overwhelming but it should run with the values pre-configured.
+<p>The skin.conf file may appear overwhelming but it should run with the values that are pre-configured.
 If not wade through it and find what needs tweaking.
 
 It's well commented :-)</p>
@@ -127,12 +127,9 @@ It's well commented :-)</p>
 #
 #  4 min after, every 12 hours
 #report_timing  = '4 */12 * * *'
-#  20 min after, every hour
-#report_timing = '*/20 * * * *'
-report_timing = '@daily'
 
 # First time? Need a refresher? There's a README.md file in the skins directory
-# for detailed instructions, or sqlbackupREADME.html on your weewx server.
+# or sqlbackupREADME.html on your weewx server.
 
 [sqlbackup]  # This section heading is lower case to enable report duplication.
 
@@ -146,10 +143,9 @@ report_timing = '@daily'
         #mysql_database = "weatherpi mesoraw"
         #sql_database = "pmon weewx"
 
-        # default is preset as '' (none) which will do the dailies as well.
-        # (daily tables get rebuilt when weewx restarts) Leave as archive for slightly 
-        # smaller backups
-        sql_table = "archive"
+        # default is preset as 'archive' Change to '' to dump the dailies as well.
+        # The daily tables get rebuilt when weewx restarts so we ignore them.
+        #sql_table = ""
         # default is preset as /var/backups
         mysql_bup_dir = "/opt/backups/mysql-backups"
         # default is preset as /var/backups
@@ -161,10 +157,6 @@ report_timing = '@daily'
         # for serious testing - test your backups to ensure they actually do what you want!
         # Default is preset to "True" To disable uncomment the following line.
         #sql_gen_report = 'False'
-        # html_root is used for the report and readme. The default is HTML_ROOT in weewx.conf
-        # but can be redirected under the [Section] or here the current templates are for
-        # the Seasons (newskin branch)
-        #html_root ="/var/www/html/weewx"
 
         # these need to match, and the user needs do it for now
         # 86400 seconds = 24 hours # 604800 seconds = 7 days
@@ -270,7 +262,7 @@ We need:-</p>
 cd /tmp/restore
 cp our_partial_backups to_here
 gunzip *</code></pre>
-<p>That's the groundwork, we should now be ready to start.<br />
+<p>That's the groundwork, we are now ready to start.<br />
 <ul>
  <li>Create some duplicate files</li>
  <li>Edit these <em>header</em> and <em>footer</em> files to contain only those fields (we don't want any INSERT INTO instructions)
@@ -369,7 +361,56 @@ sqlite&gt; .quit</code></pre>
 <pre><code>09:22 AM $ echo &#39;pragma integrity_check;&#39; | sqlite3 pmon.sdb
 ok</code></pre>
 
-That's it. Done.
+<h2 id="setting-up-the-report-pages">Setting up the report pages</a></h2><a href="#Top">Back to top</a>
+<p>The report page is optional but recommended. At the very least generate and use it while setting up the skin. It's intended to give a quick overview of what happened during each run.<br />
+An extract of the .sql capture is displayed, the command syntax used, and any errors that occured with that system command. The sql extract shows the start and finish of the file so you have an idea of what the file contains and therefore what the command generated. If the dump failed late in the capture, it will often show something to that affect at the end of the file. The mysql extract shows the first 100 lines and last 20. The sqlite shows the first 20 and the last 20.</p>
+<p>The report was written with the Seasons skin in mind (ie: the newskin branch at github/weewx) and uses the seasons.css file. It can be adapted to suit any other skin by simply including the &#35;includes as noted within sqlbackup.html.tmpl.</p>
+<p>The sqlbackup/sqlbackupREADME.html is a html version of the github README.md and is included to give some background and an example / outline of what to do with the resulting files. It's not meant to be a one stop HowTo. You'll need to do some further reading and attempt a few "restores" well before the time comes that you'll actually need to.</p>
+
+<h2 id="multiple-skins">Multiple databases, multiple skins</a></h2><a href="#Top">Back to top</a>
+<p>The default setup of this skin is to backup the main weewx database. It should do that 'out of the box'.<br />If you modify the database stanzas it will ignore the default behaviour and do what you ask. A space seperated list will allow you to do each of those databases. If you specify mysql_database and sql_database it will bow down and do those too, what ever you say goes. If it doesn't get up again you may want to rethink that strategy!<br /> Maybe you just want the timing of those backups to be different? If so consider using multiple skins.</p>
+
+<p>This skin can be duplicated if you want to split the backups.<br /> You may want to do this if you have multiple databases and don't want the performance hit of doing them all at once. It may also be because you want to treat them differently. Your main weewx database has a 48 hour snapshot taken daily, then a monthly snapshot taken... monthly? if only because you hate the idea of stitching all the smaller ones together again. Your mesoraw weekly, at some other time, for some other reason, etc.<p />
+You'll need to do this skin duplication process, manually.
+<pre>
+   cd skins
+   cp -r sqlbackup sqlbackupweek
+</pre>
+Open the weewx/weewx.conf file and duplicate the sqlbackup entry there, and change as required.
+
+<pre>
+
+[StdReport]
+[...]
+    #original entry
+    [[sqlbackup]]
+       HTML_ROOT = /var/www/html/weewx/sqlbackup
+       skin = sqlbackup
+    # 2nd skin
+    [[sqlbackupweek]]
+       HTML_ROOT = /var/www/html/weewx/sqlbackupweek
+       skin = sqlbackupweek
+</pre>
+
+Open the new directory, skin/sqlbackupweek and edit the skin.conf within. Change the report_timing stanza and the section heading
+
+<pre>
+
+# Report timing: http://www.weewx.com/docs/customizing.htm#customizing_gen_time
+#
+# 2 minutes past midnight, on Monday. 2 minutes past the hour may prevent a possible clash with  @daily or @weekly.
+# Monday ensures it.
+report_timing = '2 * * * 1'
+
+#[...]
+
+#[sqlbackup] # This section heading is all lower case to enable skin duplication.
+[sqlbackupweek] # This section heading is all lower case to enable skin duplication.
+
+        #sql_user = "your_user_if_different_to_weewx.conf"
+</pre>
+
+That's it. You should be good to go. Tread lightly.
 
           </div>
 </div>
