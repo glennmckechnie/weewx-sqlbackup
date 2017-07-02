@@ -1,7 +1,8 @@
 ## identifier for standard skin
 ## Copyright Tom Keffer, Matthew Wall
 ## See LICENSE.txt for your rights
-## This version is for use with sqlbackup/sqlbackup.html.tmpl
+## This version is for use with seasons/index.html.tmpl
+## it comes with a few issues, see sqlbackupREADME.html
 
 #errorCatcher Echo
 
