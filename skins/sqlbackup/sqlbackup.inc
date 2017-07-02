@@ -1,7 +1,7 @@
 ## identifier for standard skin
 ## Copyright Tom Keffer, Matthew Wall
 ## See LICENSE.txt for your rights
-## This version is for use with the sqlbackup.html.tmpl
+## This version is for use with sqlbackup/sqlbackup.html.tmpl
 
 #errorCatcher Echo
 
@@ -9,7 +9,7 @@
   <div class="widget_title">
     <a class="widget_control_left"
       onclick="toggle_widget('sqlbackup')">&diams;</a>
-    <a  href="sqlbackup.html">SQLBackup</a>
+    <a  href="sqlbackup/sqlbackup.html">SQLBackup</a>
     <a class="widget_control"
       onclick="toggle_widget('sqlbackup')">&diams;</a>
   </div>
