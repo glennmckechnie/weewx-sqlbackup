@@ -242,7 +242,7 @@ class SqlBackup(SearchList):
         cmd_err = ''
 
         # Strictly speaking. If we're not generating reports then the following is redundant
-        # but we''ll leave the structure in place as we do generate the report page, with a
+        # but we'll leave the structure in place as we do generate the report page, with a
         # message saying we're not generating reports!
         # To disable reports completely comment out the following lines in the skin.conf file
         #   #[[ToDate]]
@@ -405,7 +405,7 @@ class SqlBackup(SearchList):
                     loginf("%s DEBUG:  sql database is %s" % (skin_name, d_base))
                 dump_file = dump_dir + "/%s-host.%s-%s-%s.gz"  % (
                                d_base, this_host, file_stamp, self.t_label)
-                # We pass a '|' and this also equires shell=True
+                # We pass a '|' and this also requires shell=True
                 cmd = "echo '.dump %s' | sqlite3 /var/lib/weewx/%s.sdb" %(self.table, d_base)
 
                 dumpcmd = subprocess.Popen(cmd, stdout=subprocess.PIPE,
