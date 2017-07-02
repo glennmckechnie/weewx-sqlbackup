@@ -55,8 +55,10 @@ Because this has since expanded to incorporate sqlite databases, where it captur
  </ul>
  <br />
 <li>Restart weewx:
-<pre class="gry">sudo /etc/init.d/weewx stop</pre>
-<pre class="gry">sudo /etc/init.d/weewx start</pre>
+<pre class="gry">
+sudo /etc/init.d/weewx stop
+
+sudo /etc/init.d/weewx start</pre>
 </ol>
 <p>The html template makes heavy use of #include files to generate the report page. These files are located in /tmp/sqlbackup and will remain after each run (if you need to inspect them or see what's happening). They will be blanked, deleted, re-generated on each run of the skin. ie: they are all renewed and should reflect each runs output. There are no stale files, they are unique to each run - thus their placement in the /tmp directory.</p>
 
@@ -366,7 +368,7 @@ ok</code></pre>
 An extract of the .sql capture is displayed, the command syntax used, and any errors that occured with that system command. The sql extract shows the start and finish of the file so you have an idea of what the file contains and therefore what the command generated. If the dump failed late in the capture, it will often show something to that affect at the end of the file. The mysql extract shows the first 100 lines and last 20. The sqlite shows the first 20 and the last 20.</p>
 <p>The report was written with the Seasons skin in mind (ie: the newskin branch at github/weewx) and uses the seasons.css file. It can be adapted to suit any other skin by simply including the &#35;includes as noted within sqlbackup.html.tmpl.</p>
 <p>The sqlbackup/sqlbackupREADME.html is a html version of the github README.md and is included to give some background and an example / outline of what to do with the resulting files. It's not meant to be a one stop HowTo. You'll need to do some further reading and perform a few practice "restores", well before the time comes that you'll actually need to.</p>
-<p>The file <i>sqlbackup.inc</i> is an &#35;include that I use with the seasons/index.html.tmpl file. It's not the cleanest implementation as<i> /tmp/sqlbackup/head.inc</i> doesn't exist until sqlbackup has run at least once. This results in the seasons skin aborting until it is generated. (You'll get a python exception logged, regarding <i>/tmp/sqlbackup/head.inc</i> being missing.) A plain link is probably better if that bothers you, or no link if your memory and typing skills are up to it.</p>
+<p>The file <i>sqlbackup.inc</i> is an &#35;include that I use with the <i>seasons/index.html.tmpl</i> file. It's not the cleanest implementation as<i> /tmp/sqlbackup/head.inc</i> doesn't exist until sqlbackup has run at least once. This results in the seasons skin aborting until it is generated. (You'll get a python exception logged, regarding <i>/tmp/sqlbackup/head.inc</i> being missing.) A plain link is probably better if that bothers you, or no link if your memory and typing skills are up to it.</p>
 
 <h2 id="multiple-skins">Multiple databases, multiple skins</a></h2><a href="#Top">Back to top</a>
 <p>The default setup of this skin is to backup the main weewx database. It should do that 'out of the box'.<br />If you modify the database stanzas it will ignore the default behaviour and do what you ask. A space seperated list will allow you to do each of those databases. If you specify mysql_database and sql_database it will bow down and do those too, what ever you say goes. If it doesn't get up again you may want to rethink that strategy!<br /> Maybe you just want the timing of those backups to be different? If so consider using multiple skins.</p>
