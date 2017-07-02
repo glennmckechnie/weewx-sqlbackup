@@ -10,19 +10,23 @@
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en">
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    <meta http-equiv="refresh" content="900">
+    <!-- meta http-equiv="refresh" content="900" -->
     <title>$station.location</title>
     <link rel="icon" type="image/png" href="favicon.ico" />
-    <link rel="stylesheet" type="text/css" href="standard.css"/>
-    <script type="text/javascript" src="standard.js"></script>
+    <link rel="stylesheet" type="text/css" href="sqlbackup.css"/>
   </head>
 
   <body onload="setup();">
     <div id="contents">
-        #include "../Standard2/titlebar.inc"
-      <p><a href="index.html">&#10096; Current Conditions</a>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href="sqlbackupREADME.html">SqlBackup README&#10095;</a></p> 
+    <div id="title_bar">
+      <div id="title">
+          <h1 class="page_title">$station.location</h1>
+           <p class="lastupdate">$current.dateTime</p>
+      </div>
+    </div>
+      <p><a href="../index.html">&#10096; Current Conditions</a>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href="sqlbackupREADME.html">SqlBackup README&#10095;</a></p> 
         <div>
-           <!-- start sqlbackup source html -->
+           <!-- start sqlbackup source html. If changing skins, use the following text and includes as the content. -->
            This page shows a summary of the output from the sqlbackup that last ran on
             #include $head_file
             <hr>
@@ -37,16 +41,16 @@
         </div>
 
     <p class="footnote">
-           <!-- start sqlbackup source variable test -->
+           <!-- start sqlbackup source file test, these are the locations of the includes above -->
     <!-- $inc_dir
          $head_file
          $links_file
          $sys_file
          $all_file
          $tail_file
-        --> 
-    <!-- $table  $html_root  $sql_debug -->
-           <!-- finish sqlbackup source variable test -->
+	 $skin_name
+        -->
+           <!-- finish sqlbackup source file test -->
       This station uses an $station.hardware to generate data.
       This data is then collected and displayed by <a href="http://weewx.com/">weeWX</a>, an
       experimental weather software system written in Python.<br>
