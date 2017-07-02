@@ -13,18 +13,21 @@ class SqlBackupInstaller(ExtensionInstaller):
         super(SqlBackupInstaller, self).__init__(
             version="0.3",
             name='sqlbackup',
-            description='Use mysqldump or .dump to create partial backups of the '
-                        'mysql weewx database, or full backups of the sqlite databases',
+            description='Use mysqldump or sqlite3 to create partial backups of the '
+                        'mysql database/s, or full backups of the sqlite database/s',
             author="Glenn McKechnie",
             author_email="glenn.mckechnie@gmail.com",
             config={
                 'StdReport': {
                     'sqlbackup': {
-                        'skin': 'sqlbackup'}}},
+                        'skin': 'sqlbackup',
+                        'HTML_ROOT': 'sqlbackup'}}},
             files=[('bin/user', ['bin/user/sqlbackup.py']),
                    ('skins/sqlbackup', ['skins/sqlbackup/skin.conf',
+                    'skins/sqlbackup/sqlbackup.css',
                     'skins/sqlbackup/sqlbackup.html.tmpl',
                     'skins/sqlbackup/sqlbackup.inc',
-                    'skins/sqlbackup/sqlbackupREADME.html'])
+                    'skins/sqlbackup/sqlbackupREADME.html'
+                    ])
                   ]
         )
