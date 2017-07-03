@@ -132,6 +132,9 @@ class SqlBackup(SearchList):
         report_timing: This is an essential. See the weewx documentation for the
         full description on this addition. There are many options
         eg:- '2 * * * 1' ,  @daily, @weekly, @monthly, etc
+        If multiple skins are configured then it's probably best not to use the
+        @daily etc shortcuts but rather use the '5 * 7 * *' style as the minutes
+        can then be adjusted to prevent clashes were they to coincide.
 
         self.sql_debug: Used to include additional info in logs, or optional
          html report. default is off, although the newly installed skin comes
@@ -179,34 +182,28 @@ class SqlBackup(SearchList):
 
         t1 = time.time() # this process's start time
 
-        # This probably abuses the weewx naming practice but it enables re-use of
-        # the skin (seperate reports) with different values:
-        # possibly databases, time_periods, all with their own report_timing stanzas
-        # of their own.
-        # If multiple skins are configured then it's probably best not to use the
-        # @daily etc shortcuts but rather use the '5 * 7 * *' style as the minutes
-        # can then be adjusted to prevent clashes were they to coincide.
-        # skin_name also allows log messages to  reflect this skin re-use
+        #skin_name also allows log messages to reflect this skins re-use
         global skin_name
         skin_name =  self.generator.skin_dict['skin']
         self.skin_name = skin_name # for export to the template / html
 
         # local debug switch "2" also = weewx.debug, "4" adds extra to html report page
         # 5 is bordering on absurd (used for release testing)
-        self.sql_debug = int(self.generator.skin_dict[skin_name].get('sql_debug','0'))
+        #self.sql_debug = int(self.generator.skin_dict[skin_name].get('sql_debug','0'))
+        self.sql_debug = int(self.generator.skin_dict.get('sql_debug','0'))
 
-        self.user = self.generator.skin_dict[skin_name].get('sql_user')
+        self.user = self.generator.skin_dict.get('sql_user')
         if not self.user:
             self.user = self.generator.config_dict['DatabaseTypes']['MySQL'].get('user')
-        self.passwd = self.generator.skin_dict[skin_name].get('sql_pass')
+        self.passwd = self.generator.skin_dict.get('sql_pass')
         if not self.passwd:
             self.passwd = self.generator.config_dict['DatabaseTypes']['MySQL'].get('password')
-        self.host = self.generator.skin_dict[skin_name].get('sql_host')
+        self.host = self.generator.skin_dict.get('sql_host')
         if not self.host:
             self.host = self.generator.config_dict['DatabaseTypes']['MySQL'].get('host')
 
-        self.myd_base = self.generator.skin_dict[skin_name].get('mysql_database','')
-        self.d_base = self.generator.skin_dict[skin_name].get('sql_database','')
+        self.myd_base = self.generator.skin_dict.get('mysql_database','')
+        self.d_base = self.generator.skin_dict.get('sql_database','')
         if not self.myd_base and not self.d_base:
             defd_base = self.generator.config_dict['DataBindings']['wx_binding'].get('database')
             if self.sql_debug >= 5 :
@@ -219,14 +216,14 @@ class SqlBackup(SearchList):
                 self.d_base = self.generator.config_dict['Databases'][defd_base].get('database_name')
                 if self.sql_debug >= 5 :
                     loginf("%s 5:3 so weewx.conf sqlite database is %s" % (skin_name, self.d_base))
-        self.table = self.generator.skin_dict[skin_name].get('sql_table','archive')
-        self.mybup_dir = self.generator.skin_dict[skin_name].get('mysql_bup_dir','/var/backups/mysql')
-        self.bup_dir = self.generator.skin_dict[skin_name].get('sql_bup_dir','/var/backups/sql')
-        self.t_period = self.generator.skin_dict[skin_name].get('sql_period','86400')
-        self.t_label = self.generator.skin_dict[skin_name].get('sql_label','daily')
-        self.dated_dir = to_bool(self.generator.skin_dict[skin_name].get('sql_dated_dir', True))
-        self.gen_report = to_bool(self.generator.skin_dict[skin_name].get('sql_gen_report', True))
-        self.inc_dir = self.generator.skin_dict[skin_name].get('inc_dir', '/tmp/sqlbackup')
+        self.table = self.generator.skin_dict.get('sql_table','archive')
+        self.mybup_dir = self.generator.skin_dict.get('mysql_bup_dir','/var/backups/mysql')
+        self.bup_dir = self.generator.skin_dict.get('sql_bup_dir','/var/backups/sql')
+        self.t_period = self.generator.skin_dict.get('sql_period','86400')
+        self.t_label = self.generator.skin_dict.get('sql_label','daily')
+        self.dated_dir = to_bool(self.generator.skin_dict.get('sql_dated_dir', True))
+        self.gen_report = to_bool(self.generator.skin_dict.get('sql_gen_report', True))
+        self.inc_dir = self.generator.skin_dict.get('inc_dir', '/tmp/sqlbackup')
 
         if self.sql_debug >= 5 : # sanity check for releases - safely ignored!
             #loginf("%s 5: weewx.conf user is  %s" % (skin_name, self.user))
