@@ -6,10 +6,10 @@ This skin (sqlbackup) uses a Search List Extension (SLE) of the same name to cal
 If it's MySQL (MariaDB) then it will dump a user specified timeframe; if it's sqlite then it will dump all of it. The default option in both cases is to only dump the archive tables.
 It will do this at regular intervals as specified by the [report_timing](http://www.weewx.com/docs/customizing.htm#customizing_gen_time) feature of weeWX.
 
-If you dump the whole database, and it's large, you can interfere with weeWX's operation and odd things may start to happen. This will depend on your CPU, database size, weeWX setup, maybe even the weather!
+If you dump the whole database, and it's large, you can interfere with weeWXs operation and odd things may start to happen. This will depend on your CPU, database size, weeWX setup, maybe even the weather!
 In most cases this probably won't matter too much and you'll just get a message about skipping reports. If we lock weeWX out of its database for too long though, the weird and wonderful may start to occur, so it's best we don't push it too far.
 
-This skin was originally configured for MySQL (MariaDB) databases only and we can configure mysqldump to do a partial dump. We can therefore limit ourselves to a small, very managable portion of the database.
+This skin was originally configured for MySQL (MariaDB) databases only and we can configure mysqldump to do a partial dump. We can therefore limit ourselves to a small, very manageable portion of the database.
 Because this has since expanded to incorporate sqlite databases, where it captures the whole database, it may be slower and more prone to interfering with weeWX. But compared to MySQL, sqlite is not as demanding so it may still be fit for duty.
 Because we are getting a full backup of the sqlite database on each run, we can perhaps do them less frequently and here the report_timing feature really comes into its own.
 Sqlite databases can also be backed up by simply copying them, if you want a similar 'skinned' approach that does just that then have a look at [Using the RSYNC skin as a backup solution.](https://github.com/weewx/weewx/wiki/Using-the-RSYNC-skin-as-a-backup-solution)
@@ -20,7 +20,7 @@ With the variation in weeWX setups, the only way to know how it will work for yo
 
 ### Installation
 
-This SLE's prerequistes are
+This SLE's prerequisites are
 
     * sqlite3 (Which I don't think is installed by default?)
     * mysqldump (Which I believe is part of the default mysql install)
@@ -77,7 +77,7 @@ dump the data into a suitable file(name)
     mysqldump -uweewx -p -hlocalhost weatherpi archive --single-transaction --skip-opt |
             gzip > /{your_backup_directory}/wholebackup-1497830683.sql.gz
 
-Adding the epoch date string to the filename helps in determing its current age, when to do update from. You'll then use the partial backups created by this skin, to restore from that date.
+Adding the epoch date string to the filename helps in determining its current age, when to do update from. You'll then use the partial backups created by this skin, to restore from that date.
 
 When configuring your sqlbackup, DO turn on sql_debug in the skin.conf file and view the output in /var/log/syslog (or your default log) or in the report page, sqlbackup/index.html 
 
@@ -312,7 +312,7 @@ Using these modified files we use **sort** to remove duplicate lines and create 
     sort -u 1 1a 2 3 > 11a23
     # the order really does not matter, sort will do what it says and the -u flag will get rid of the dupes.
 
-We now create a new file with a header, all the INSERT's we require, plus the footer. We're back to the start, but bigger and better.
+We now create a new file with a header, all the INSERTs we require, plus the footer. We're back to the start, but bigger and better.
 
     cat header  > new_file.sql
     cat 11a23 >> new_file.sql
@@ -334,9 +334,9 @@ And if you want to, dump that and compare it to what we restored from the new_fi
 
 That's an outline of the process. Names have obviously been changed to suit. Tweak to suit.
 
-#### A psuedo script
+#### A pseudo script
 
-The following is a psuedo bash script - it will work as is (after changing names!) but you'll need to be familiar with vim and the process as outlined above, re: headers and footers
+The following is a pseudo bash script - it will work as is (after changing names!) but you'll need to be familiar with vim and the process as outlined above, re: headers and footers
 
 ```
 #!/bin/sh
@@ -404,7 +404,7 @@ or
 ### Setting up the report pages
 
 The report page is optional but recommended. At the very least generate and use it while setting up the skin. It's intended to give a quick overview of what happened during each run.
-An extract of the .sql capture is displayed, the command syntax used, and any errors that occured with that system command. The sql extract shows the start and finish of the file so you have an idea of what the file contains and therefore what the command generated. If the dump failed late in the capture, it will often show something to that affect at the end of the file. The mysql extract shows the first 100 lines and last 20. The sqlite shows the first 20 and the last 20.
+An extract of the .sql capture is displayed, the command syntax used, and any errors that occurred with that system command. The sql extract shows the start and finish of the file so you have an idea of what the file contains and therefore what the command generated. If the dump failed late in the capture, it will often show something to that affect at the end of the file. The mysql extract shows the first 100 lines and last 20. The sqlite shows the first 20 and the last 20.
 
 The report was written with the Seasons skin in mind (ie: the newskin branch at github/weewx) and uses the seasons.css file. It can be adapted to suit any other skin by simply including the #includes as noted within sqlbackup/index.html.tmpl.
 

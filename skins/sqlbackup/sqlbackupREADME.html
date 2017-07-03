@@ -25,22 +25,22 @@
 &nbsp;&nbsp;&nbsp;&nbsp;<a href="#configuring-partial-dump">Configuring: skin.conf</a><br />
 &nbsp;&nbsp;&nbsp;&nbsp;<a href="#working-with-the-dump-files">Working with the MySQL dump files</a><br />
 &nbsp;&nbsp;&nbsp;&nbsp;<a href="#to-restore-using-more-than-one-file...">To restore using more than one file...</a><br />
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href="#psuedo-script">A psuedo script</a><br />
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href="#pseudo-script">A pseudo script</a><br />
 &nbsp;<a href="#notes-for-sqlite-.sdb-databases">Notes for sqlite (.sdb) databases</a><br />
 &nbsp;<a href="#setting-up-the-report-pages">Setting up the report pages</a><br />
 &nbsp;<a href="#multiple-skins">Multiple databases, multiple skins</a><br />
 <hr>
 <h2 id="sqlbackup-readme">SQLBackup README</h2>
 <p>This skin (<a href="https://github.com/glennmckechnie/weewx-sqlbackup">sqlbackup</a>) uses a Search List Extension (SLE) of the same name to call mysqldump and/or sqlite to dump data from the weeWX database.<br /> If it's MySQL (MariaDB) then it will dump a user specified timeframe; if it's sqlite then it will dump all of it. The default option for both cases is to only dump the archive tables.<br />It will do this at regular intervals as specified by the <a href="http://www.weewx.com/docs/customizing.htm#customizing_gen_time">report_timing</a> feature of weeWX.</p>
-<p>If you dump the whole database, and it's large, you can interfere with weeWX's operation and odd things may start to happen. This will depend on your CPU, database size, weeWX setup, maybe even the weather!<br />
+<p>If you dump the whole database, and it's large, you can interfere with weeWXs operation and odd things may start to happen. This will depend on your CPU, database size, weeWX setup, maybe even the weather!<br />
 In most cases this probably won't matter too much and you'll just get a message about skipping reports. If we lock weeWX out of its database for too long though, the weird and wonderful may start to occur, so it's best we don't push it too far.
 </p>
-<p>This skin was originally configured for MySQL (MariaDB) databases only and we can configure mysqldump to do a partial dump. We can therefore limit ourselves to a small, very managable portion of the database.<br />
+<p>This skin was originally configured for MySQL (MariaDB) databases only and we can configure mysqldump to do a partial dump. We can therefore limit ourselves to a small, very manageable portion of the database.<br />
 Because this has since expanded to incorporate sqlite databases, where it captures the whole database, it may be slower and more prone to interfering with weeWX. But compared to MySQL, sqlite is not as demanding so it may still be fit for duty.<br />Because we are getting a full backup of the sqlite database on each run, we can perhaps do them less frequently and here the report_timing feature really comes into its own.<br />Sqlite databases can also be backed up by simply copying them, if you want a similar 'skinned' approach that does just that then have a look at <a href="https://github.com/weewx/weewx/wiki/Using-the-RSYNC-skin-as-a-backup-solution">Using the RSYNC skin as a backup solution.</a><br />Both these methods aim to create a backup during a quiet window of time (when there are no database writes) and that's available within the weeWX cycle.</p>
 <p>With the variation in weeWX setups, the only way to know how it will work for you is to give it a try. Just start off gently and DON'T ask for too much at once, be conservative with what you're asking for.</p>
 <h2 id="installation">Installation</h2><a href="#Top">Back to top</a>
 
-<p>This SLE's prerequistes are
+<p>This SLEs prerequisites are
 <ul>
  <li>sqlite3 (Which I don't think is installed by default?)
  <li>mysqldump (Which is part of the default mysql install.)
@@ -84,7 +84,7 @@ To get that initial database, you can do this manually by invoking mysqldump fro
 <p>dump the data into a suitable file(name)</p>
 <pre class="gry"><code>mysqldump -uweewx -p -hlocalhost weatherpi archive --single-transaction --skip-opt |
         gzip &gt; /{your_backup_directory}/wholebackup-1497830683.sql.gz</code></pre>
-<p>Adding the epoch date string to the filename helps in determing its current age, ie:- when to do update from. You'll then use the partial backups created by this skin, to restore from that date.</p>
+<p>Adding the epoch date string to the filename helps in determining its current age, ie:- when to do update from. You'll then use the partial backups created by this skin, to restore from that date.</p>
 <h3 id="method-2">Full dump: Method 2</h3><a href="#Top">Back to top</a>
 <p> Or if you want to live dangerously and see just how long it does take to generate a whole backup with this skin, and see if my warnings are overstated, then configure the skin.conf for that single run.<br />
 Picking a timestamp that precedes your database starting point should do it. eg:- Unless you have over 2 years of data the following should work - adjust accordingly.</p>
@@ -194,7 +194,7 @@ It's well commented :-)</p>
 --
 -- Host: localhostDatabase: weatherpi
 -- ------------------------------------------------------
--- Server versioni&gt;······5.5.55-0+deb8u1
+-- Server version&gt;······5.5.55-0+deb8u1
 /*!40103 SET @OLD_TIME_ZONE=@@TIME_ZONE */;
 /*!40103 SET TIME_ZONE='+00:00' */;
 /*!40014 SET @OLD_UNIQUE_CHECKS=@@UNIQUE_CHECKS, UNIQUE_CHECKS=0 */;
@@ -299,7 +299,7 @@ cp weatherpi-host.masterofpis-201706190021-daily 3</code></pre>
 sort -u 1 1a 2 3 &gt; tempins
 # the order really does not matter, sort will do what it says and the -u flag will get rid of the dupes.</code></pre>
 
-<p>We now create a new file with a header, all the INSERT's we require, plus the footer.<br />
+<p>We now create a new file with a header, all the INSERTs we require, plus the footer.<br />
 We're back to the start, but bigger and better!</p>
 <pre class="gry"><code>cat header  &gt; new_file.sql
 cat tempins &gt;&gt; new_file.sql
@@ -314,8 +314,8 @@ quit;</code></pre>
 <pre class="gry"><code>mysqldump -u root -p -q --single-transaction --skip-opt dumptestnew &gt; dumptestnew-compare.sql
 vim -d new_file.sql dumptestnew-compare.sql</code></pre>
 <p>That's an outline of the process. Names have obviously been changed to suit. Tweak to suit.</p>
-<h4 id="psuedo-script">A psuedo script</h4><a href="#Top">Back to top</a>
-<p>The following is a psuedo bash script - it will work as is (after changing names!) but you'll need to be familiar with vim and the process as outlined above, re: headers and footers</p>
+<h4 id="pseudo-script">A pseudo script</h4><a href="#Top">Back to top</a>
+<p>The following is a pseudo bash script - it will work as is (after changing names!) but you'll need to be familiar with vim and the process as outlined above, re: headers and footers</p>
 <pre class="gry"><code>
 #!/bin/sh
 
@@ -375,13 +375,13 @@ ok</code></pre>
 
 <h2 id="setting-up-the-report-pages">Setting up the report pages</a></h2><a href="#Top">Back to top</a>
 <p>The report page is optional but recommended. At the very least generate and use it while setting up the skin. It's intended to give a quick overview of what happened during each run. It will also catch the errors that don't create an exception in the script, or bypass stderr. We redirect stdout to the dump files and that's where some of them will end up.<br />
-An extract of the .sql capture is displayed, the command syntax used, and any errors that occured with that system command. The sql extract shows the start and finish of the file so you have an idea of what the file contains and therefore what the command generated. If the dump failed late in the capture, it will often show something to that affect at the end of the file. The mysql extract shows the first 100 lines and last 20. The sqlite shows the first 20 and the last 20.</p>
+An extract of the .sql capture is displayed, the command syntax used, and any errors that occurred with that system command. The sql extract shows the start and finish of the file so you have an idea of what the file contains and therefore what the command generated. If the dump failed late in the capture, it will often show something to that affect at the end of the file. The mysql extract shows the first 100 lines and last 20. The sqlite shows the first 20 and the last 20.</p>
 <p>The report was written with the Seasons skin in mind (ie: the newskin branch at github/weewx) and uses the seasons.css file. It can be adapted to suit any other skin by simply including the &#35;includes as noted within sqlbackup/index.html.tmpl.</p>
 <p>The sqlbackup/sqlbackupREADME.html is a html version of the github README.md and is included to give some background and an example / outline of what to do with the resulting files. It's not meant to be a one stop HowTo. You'll need to do some further reading and perform a few practice "restores", well before the time comes that you'll actually need to.</p>
 <p>The file <i>sqlbackup.inc</i> is an &#35;include that I use with the <i>seasons/index.html.tmpl</i> file. It's not the cleanest implementation as<i> /tmp/sqlbackup/head.inc</i> doesn't exist until sqlbackup has run at least once. This results in the seasons skin aborting until it is generated. (You'll get a python exception logged, regarding <i>/tmp/sqlbackup/head.inc</i> being missing.) A plain link is probably better if that bothers you, or no link if your memory and typing skills are up to it.</p>
 
 <h2 id="multiple-skins">Multiple databases, multiple skins</a></h2><a href="#Top">Back to top</a>
-<p>The default setup of this skin is to backup the main weewx database. It should do that 'out of the box'.<br />If you modify the database stanzas it will ignore the default behaviour and do what you ask. A space seperated list will allow you to do each of those databases. If you specify mysql_database and sql_database it will bow down and do those too, what ever you say goes. If it doesn't get up again you may want to rethink that strategy!<br /> Maybe you just want the timing of those backups to be different? If so consider using multiple skins.</p>
+<p>The default setup of this skin is to backup the main weewx database. It should do that 'out of the box'.<br />If you modify the database stanzas it will ignore the default behaviour and do what you ask. A space separated list will allow you to do each of those databases. If you specify mysql_database and sql_database it will bow down and do those too, what ever you say goes. If it doesn't get up again you may want to rethink that strategy!<br /> Maybe you just want the timing of those backups to be different? If so consider using multiple skins.</p>
 
 <p>This skin can be duplicated if you want to split the backups.<br /> You may want to do this if you have multiple databases and don't want the performance hit of doing them all at once. It may also be because you want to treat them differently. Your main weewx database has a 48 hour snapshot taken daily, then a monthly snapshot taken... monthly? if only because you hate the idea of stitching all the smaller ones together again. Your mesoraw weekly, at some other time, for some other reason, etc.<p />
 You'll need to do this skin duplication process, manually.
@@ -427,7 +427,7 @@ That's it. You should be good to go. Tread lightly.
 </div>
     <p class="footnote">
           This site uses <a href="http://weewx.com/">weeWX</a> to collect and display weather station data from a Personal Weather Station (PWS). WeeWX is an experimental weather software system written in Python.<br>
-          This skin is avaliable at github as <a href="https://github.com/glennmckechnie/weewx-sqlbackup">sqlbackup</a>
+          This skin is available at github as <a href="https://github.com/glennmckechnie/weewx-sqlbackup">sqlbackup</a>
          </p>
 </body>
 
