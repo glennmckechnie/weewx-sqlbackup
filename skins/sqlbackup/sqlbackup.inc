@@ -10,7 +10,7 @@
   <div class="widget_title">
     <a class="widget_control_left"
       onclick="toggle_widget('sqlbackup')">&diams;</a>
-    <a  href="sqlbackup/sqlbackup.html">SQLBackup</a>
+    <a  href="sqlbackup/index.html">SQLBackup</a>
     <a class="widget_control"
       onclick="toggle_widget('sqlbackup')">&diams;</a>
   </div>

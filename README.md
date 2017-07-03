@@ -34,9 +34,9 @@ With the variation in weeWX setups, the only way to know how it will work for yo
 
    * In particular, check the backup directory (xxsql_bup_dir) paths. They will be created on the first run.
 
-   * The default is to generate reports - sqlbackup.html.
+   * The default is to generate reports - sqlbackup/index.html.
 
-   * If you're not using the newskin branch of weeWX - Seasons, then configure the sqlbackup.html.tmpl etc. to suit.
+   * If you're not using the newskin branch of weeWX - Seasons, then configure the sqlbackup/index.html.tmpl etc. to suit.
 
 3 restart weewx:
 
@@ -69,7 +69,7 @@ dump the data into a suitable file(name)
 
 Adding the epoch date string to the filename helps in determing its current age, when to do update from. You'll then use the partial backups created by this skin, to restore from that date.
 
-When configuring your sqlbackup, DO turn on sql_debug in the skin.conf file and view the output in /var/log/syslog (or your default log) or in the report page, sqlbackup.html 
+When configuring your sqlbackup, DO turn on sql_debug in the skin.conf file and view the output in /var/log/syslog (or your default log) or in the report page, sqlbackup/index.html 
 
 ###### Full dump: Method 2
 
@@ -172,14 +172,14 @@ report_timing = '@daily'
         # Default is preset to "0" so commenting it out will disable DEBUG output from this skin
         # Set sql_debug to "2" for extra DEBUG info in the logs.
         # (It will also log when the global weewx.conf debug is set to "2")·
-        # Set sql_debug to "4" for extra DEBUG info in the report page - sqlbackup.html
+        # Set sql_debug to "4" for extra DEBUG info in the report page - sqlbackup/index.html
         sql_debug = "4"
 ###############################################################################
 ```
 ### Working with the MySQL dump files
 
 When configuring sqlbackup, DO turn on sql_debug in the skin.conf file.
-Set it to at least 2 for system logging (/var/log/syslog). If you're generating the html report then set it to 4 and you'll find the debug output at the bottom of the sqlbackup.html page.
+Set it to at least 2 for system logging (/var/log/syslog). If you're generating the html report then set it to 4 and you'll find the debug output at the bottom of the sqlbackup/index.html page.
 Pay particular attention to the times returned in the DEBUG lines. Make sure they are sane. (Remember the warnings above?)
 
 The partial dumps created by this skin have a header, which includes the CREATE TABLE statement - a lot of INSERT statements and a footer.
@@ -370,7 +370,7 @@ The dumps that this skin creates with sqlite3 are a backup of the whole database
 
 The process to dump an sqlite database goes a lot faster than the mysqldump process. This doesn't mean that you can ignore the warnings outlined above. It will still take time and you won't know how it long that will be until you've tried it out. If it does fail badly then try another method, such as the one using Rsync outlined on the weeWX wiki (see the link given at the start).
 
-Same method applies as above when you are configuring sqlbackup, DO turn on sql_debug in the skin.conf file. Set it to at least 2 for system logging (/var/log/syslog). If you're generating the html report then set it to 4 and you'll find the debug output at the bottom of the sqlbackup.html page. Pay particular attention to the times returned in the DEBUG lines. Make sure they are sane. (Remember the warnings above?)
+Same method applies as above when you are configuring sqlbackup, DO turn on sql_debug in the skin.conf file. Set it to at least 2 for system logging (/var/log/syslog). If you're generating the html report then set it to 4 and you'll find the debug output at the bottom of the sqlbackup/index.html page. Pay particular attention to the times returned in the DEBUG lines. Make sure they are sane. (Remember the warnings above?)
 
 To restore it...
 
@@ -396,7 +396,7 @@ or
 The report page is optional but recommended. At the very least generate and use it while setting up the skin. It's intended to give a quick overview of what happened during each run.
 An extract of the .sql capture is displayed, the command syntax used, and any errors that occured with that system command. The sql extract shows the start and finish of the file so you have an idea of what the file contains and therefore what the command generated. If the dump failed late in the capture, it will often show something to that affect at the end of the file. The mysql extract shows the first 100 lines and last 20. The sqlite shows the first 20 and the last 20.
 
-The report was written with the Seasons skin in mind (ie: the newskin branch at github/weewx) and uses the seasons.css file. It can be adapted to suit any other skin by simply including the #includes as noted within sqlbackup.html.tmpl.
+The report was written with the Seasons skin in mind (ie: the newskin branch at github/weewx) and uses the seasons.css file. It can be adapted to suit any other skin by simply including the #includes as noted within sqlbackup/index.html.tmpl.
 
 The sqlbackup/sqlbackupREADME.html is a html version of the github README.md and is included to give some background and an example / outline of what to do with the resulting files. It's not meant to be a one stop HowTo. You'll need to do some further reading and attempt a few "restores" well before the time comes that you'll actually need to.
 

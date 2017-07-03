@@ -25,7 +25,7 @@ class SqlBackupInstaller(ExtensionInstaller):
             files=[('bin/user', ['bin/user/sqlbackup.py']),
                    ('skins/sqlbackup', ['skins/sqlbackup/skin.conf',
                     'skins/sqlbackup/sqlbackup.css',
-                    'skins/sqlbackup/sqlbackup.html.tmpl',
+                    'skins/sqlbackup/index.html.tmpl',
                     'skins/sqlbackup/sqlbackup.inc',
                     'skins/sqlbackup/sqlbackupREADME.html'
                     ])
