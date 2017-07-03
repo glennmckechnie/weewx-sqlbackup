@@ -20,6 +20,15 @@ With the variation in weeWX setups, the only way to know how it will work for yo
 
 ### Installation
 
+This SLE's prerequistes are
+
+    * sqlite3 (Which I don't think is installed by default?)
+    * mysqldump (Which I believe is part of the default mysql install)
+
+Everything else should be there already as they are listed under Debian as [essential] packages, except 'free' but I believe that's also included on a default install.
+
+#### Otherwise...
+
 1 Run the installer:
 
 **wee_extension --install weewx-sqlbackup-master.zip**
@@ -36,7 +45,7 @@ With the variation in weeWX setups, the only way to know how it will work for yo
 
    * The default is to generate reports - sqlbackup/index.html.
 
-   * If you're not using the newskin branch of weeWX - Seasons, then configure the sqlbackup/index.html.tmpl etc. to suit.
+   * The templates take their style from the newskin branch of weeWX - Seasons
 
 3 restart weewx:
 
@@ -50,7 +59,8 @@ The html template makes heavy use of #include files to generate the report page.
 
 If your database is a MySQL one then to use this backup method effectively, you need to do a full dump (backup) of your main weeWX database first. Of note; while dumping the database may take seconds, stretching to minutes, rebuilding it can take hours. The best advice I can offer is to rebuild it as a working copy ASAP. You will then bring that up-todate with the partial dumps. Whatever you do - test your restore strategy well before time.
 
-A strategy I've used is to have a working, preferably empty, sqlite database ready to go. If you need to rebuild your MySQL database you can simply reconfigure weewx to use archive_sqlite while the MySQL is restored. Once the MySQL is restored, swap weewx back to archive_mysql. Dump the sqlite into an sql file, convert and import it into your restored and working MySQL (reference the notes on the wiki - [Transfer from sqlite to MySQL[(http://github.com/weewx/weewx/wiki/Transfer%20from%20sqlite%20to%20MySQL) and you'll fill the gaps nicely - well, most of them.
+A strategy I've used is to have a working, preferably empty, sqlite database ready to go. If you need to rebuild your MySQL database you can simply reconfigure weewx to use archive_sqlite while the MySQL is restored. Once the MySQL restore is finished, swap weewx back to archive_mysql so that it points to it. Then dump that temporary sqlite database into an sql file, convert and import it into that restored and working MySQL  and you'll fill the gaps nicely - well, those that you can. This method saves weewx from sitting idle while you do the frustrating long, MySQL restore.
+Visit the weeWx wiki and view [Transfer from sqlite to MySQL](http://github.com/weewx/weewx/wiki/Transfer%20from%20sqlite%20to%20MySQL) for help on the transfer.
 
 However you choose to do it, we need a starting point.
 To get that initial database, you can do this manually by invoking mysqldump from the command line, similar to the following.
@@ -65,7 +75,7 @@ Get the epoch date string to use in the filename (optional but helpful later).
 dump the data into a suitable file(name)
 
     mysqldump -uweewx -p -hlocalhost weatherpi archive --single-transaction --skip-opt |
-            gzip > /{your_backup_directory}/wholebackup-1497830683.sql
+            gzip > /{your_backup_directory}/wholebackup-1497830683.sql.gz
 
 Adding the epoch date string to the filename helps in determing its current age, when to do update from. You'll then use the partial backups created by this skin, to restore from that date.
 
