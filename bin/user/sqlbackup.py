@@ -50,16 +50,17 @@ class SqlBackup(SearchList):
     The idea is to instead select a small rolling window from the database (if
     its a MySQL or MariaDB) and dump this at each report_timing interval. We
     will use that as a partial backup.
-    At restore time we'll then need to select some or all of the dump files, and
-    stitch them together as appropriate.
+    At restore time we'll then need to select some or all of the dump files,
+    and stitch them together as appropriate.
 
     If it's an sqlite dtabase, it will dump it (them) all.
 
-    This skin was created to backup a mysql database that runs purely in memory,
-    it has since evolved to include sqlite databases as well.
-    Because running a database in memory is a little! fragile (to say the least.)
-    I configured my script to run every hour, and dumps the last 24 hours of the
-    database to the  xxsql_bup_file in the format...
+    This skin was created to backup a mysql database that runs purely in
+    memory, it has since evolved to include sqlite databases as well.
+    Because running a database in memory is a little! fragile (to say the
+    least.)
+    I configured my script to run every hour, and dumps the last 24 hours of
+    the database to the  xxsql_bup_file in the format...
          {database}-host.{hostname}-{epoch-timestamp}-{window-time-period}.gz
     eg:  weatherpi-host.masterofpis-201706132105-24hours.gz
 
@@ -67,10 +68,10 @@ class SqlBackup(SearchList):
     report generation in weewx. Your processor, memory, database, archive
     interval will be different to mine... YMWV
 
-    You'll need to adjust the values to suit you. Setting sql_debug = "2" in the
-    skin.conf will inform you while you make changes, look at the logs.
+    You'll need to adjust the values to suit you. Setting sql_debug = "2" in
+    the skin.conf will inform you while you make changes, look at the logs.
     Or, if you set sql_debug = "4" it will be included at the foot of the
-    sqlbackup.html page.
+    sqlbackup/index.html page.
 
     This script currently performs no error checking so check the resulting
     files for integrity.
@@ -85,9 +86,9 @@ class SqlBackup(SearchList):
     Keep it small and sensible and that should all remain true.
 
     Testing: BACK UP your database first - via other methods. (Okay, Truth is.
-    I've used this script by passing a suitable unix time string as the sql_period
-    and have lived to tell the tale. I was able to put the pieces together
-    again.)
+    I've used this script by passing a suitable unix time string as the
+    sql_period and have lived to tell the tale. I was able to put the pieces
+    together again.)
     60*60*24*365*2
     sql_period = "63072000"
 
@@ -98,14 +99,16 @@ class SqlBackup(SearchList):
     through the setup process quickly by copying and modifying a minimal
     weewx.conf file as weewx.wee.conf and invoke that by using.
 
-    wee_reports /etc/weewx/weewx.wee.conf && tail -n20 /var/log/syslog | grep wee_report
+    wee_reports /etc/weewx/weewx.wee.conf && tail -n20 /var/log/syslog |
+     grep wee_report
 
-    then watch your logs, or the sqlbackup.html page if you're generating the
-    report.
+    then watch your logs, or the sqlbackup/index.html page if you're generating
+    the report.
 
-    One hiccup with the wee_reports method is that it may return longer times if
-    it encounters a locked database. The ultimate test is when it's run under
-    weewx's control, but wee_reports is still very useful to fine tune your setup.
+    One hiccup with the wee_reports method is that it may return longer times
+    if it encounters a locked database. The ultimate test is when it's run
+    under weewx's control, but wee_reports is still very useful to fine tune
+    your setup.
 
     # only because I can never remember
     # date -d "11-june-2017 21:00:00" +'%s'
@@ -241,16 +244,18 @@ class SqlBackup(SearchList):
         e = ''
         cmd_err = ''
 
-        # Strictly speaking. If we're not generating reports then the following is redundant
-        # but we'll leave the structure in place as we do generate the report page, with a
-        # message saying we're not generating reports!
-        # To disable reports completely comment out the following lines in the skin.conf file
+        # Strictly speaking. If we're not generating reports then the following
+        # is redundant but we'll leave the structure in place as we do generate
+        # the report page, with a message saying we're not generating reports!
+        # To disable reports completely comment out the following lines in the
+        # skin.conf file
         #   #[[ToDate]]
         #   #    [[[index]]]
-        #   #        template = sqlbackup.html.tmpl
+        #   #        template = index.html.tmpl
         #
-        # Back to it... Do the housework first, we clean out all the *.inc 's now rather
-        # than later. This allows their content to be inspected between runs.
+        # Back to it... Do the housework first, we clean out all the *.inc 's
+        # now rather  than later. This allows their content to be inspected
+        # between runs.
         if os.path.exists(self.inc_dir):
             try:
                 shutil.rmtree(self.inc_dir)
@@ -271,7 +276,7 @@ class SqlBackup(SearchList):
         self.sys_file = "%s/syslinks.inc" % self.inc_dir
         self.no_file = "%s/none.inc" % self.inc_dir
 
-        # test if at least one .inc file can be created and bail out if it fails
+        # test if at least one .inc file can be created & bail out if it fails
         try:
             chck = open(self.head_file, 'w+')
         except IOError, e:
@@ -279,14 +284,17 @@ class SqlBackup(SearchList):
             return
         chck.close()
 
-        # start with a no report message. If we do generate reports we'll overwrite it.
-        # This is probably now redundant as we pick up the default database.
+        # start with a no report message. If we do generate reports we'll
+        # overwrite it. This is probably now redundant as we pick up the
+        # default database.
         chck = open(self.all_file, 'a')
-        chck.write("<p><b>There's nothing to report.</b></p><p>Do you have any "
-             "databases configured?</br> Check the config file (skin.conf)</p>")
+        chck.write("<p><b>There's nothing to report.</b></p><p>Do you have"
+                   " any databases configured?</br> Check the config file"
+                   " (skin.conf)</p>")
         chck.close()
 
-        # then prime the links .inc with the start of the page index - to be continued
+        # then prime the links .inc with the start of the page index - to be
+        # continued
         try:
             strt = open(self.links_file, 'w')
         except IOError, e:
@@ -341,23 +349,26 @@ class SqlBackup(SearchList):
             self.mydbase = self.myd_base.split()
             mydbase_len = len(self.mydbase)
             if weewx.debug >= 2 or self.sql_debug >= 2 :
-                loginf("%s DEBUG: databases, mysql %s named %s" % (skin_name, mydbase_len,
-                self.mydbase))
+                loginf("%s DEBUG: databases, mysql %s named %s" % (
+                    skin_name, mydbase_len, self.mydbase))
             for step in range(mydbase_len):
                 t5 = time.time() # this loops start time
                 myd_base = self.mydbase[step]
-                # Because we use the  "--where..." clause, we run into trouble when
-                # dumping all tables so we use "--ignore..."  to prevent an incomplete
-                # dump. This is because there is no dateTime in the metadata table.
-                # And thankfully, this is silently ignored if there is no table of this name;
-                # for databases such as mesoraw and sqlite3
+                # Because we use the  "--where..." clause, we run into trouble
+                # when dumping all tables so we use "--ignore..."  to prevent
+                # an incomplete dump. This is because there is no dateTime in
+                # the metadata table.
+                # And thankfully, this is silently ignored if there is no table
+                # of this name; for databases such as mesoraw and sqlite3
                 if len(self.table) < 1:
                     self.ignore = "--ignore-table=%s.archive_day__metadata" % myd_base
-                    loginf("%s DEBUG: ALL tables specified,including option %s" % (skin_name, self.ignore))
+                    loginf("%s DEBUG: ALL tables specified,including option %s" % (
+                           skin_name, self.ignore))
                 else:
                     self.ignore = ""
                 if weewx.debug >= 2 or self.sql_debug >= 2:
-                    loginf("%s DEBUG:  mysql database is %s" % (skin_name, myd_base))
+                    loginf("%s DEBUG:  mysql database is %s" % (
+                           skin_name, myd_base))
                 mydump_file = mydump_dir + "/%s-host.%s-%s-%s.gz"  % (
                     myd_base, this_host, file_stamp, self.t_label)
                 # We pass a '>' and this requires shell=True
@@ -379,15 +390,17 @@ class SqlBackup(SearchList):
                 log_cmd = cmd.replace(self.user ,"XxXxX" )
                 log_cmd = log_cmd.replace(self.passwd ,"XxXxX" )
                 if weewx.debug >= 2 or self.sql_debug >= 2:
-                    loginf("%s DEBUG: %.2f secs to run %s" % (skin_name, (t6-t5), log_cmd))
+                    loginf("%s DEBUG: %.2f secs to run %s" % (
+                            skin_name, (t6-t5), log_cmd))
 
                 if self.gen_report:
                     line_count = "100"
                     sql_name = "mysql"
-                    log_cmd = ("%s \n\n %s \n" % (log_cmd, cmd_err))
-                    cmd_err = ''
+                    if len(cmd_err) > 1:
+                        log_cmd = ("%s \n\n %s \n" % (log_cmd, cmd_err))
+                        cmd_err = ''
                     self.report(self.inc_dir, carry_index, log_cmd,
-                                mydump_file, myd_base, line_count, sql_name, start_loop)
+                         mydump_file, myd_base, line_count, sql_name, start_loop)
                     carry_index = link_index
                     start_loop = strt_loop
 
@@ -406,7 +419,8 @@ class SqlBackup(SearchList):
                 dump_file = dump_dir + "/%s-host.%s-%s-%s.gz"  % (
                                d_base, this_host, file_stamp, self.t_label)
                 # We pass a '|' and this also requires shell=True
-                cmd = "echo '.dump %s' | sqlite3 /var/lib/weewx/%s.sdb" %(self.table, d_base)
+                cmd = "echo '.dump %s' | sqlite3 /var/lib/weewx/%s.sdb" % (
+                         self.table, d_base)
 
                 dumpcmd = subprocess.Popen(cmd, stdout=subprocess.PIPE,
                                       stderr=subprocess.PIPE, shell=True)
@@ -421,15 +435,17 @@ class SqlBackup(SearchList):
                 t8 = time.time() # this loops start time
 
                 if weewx.debug >= 2 or self.sql_debug >= 2:
-                    loginf("%s DEBUG: %.2f secs to run %s" % (skin_name, (t8-t7), cmd))
+                    loginf("%s DEBUG: %.2f secs to run %s" % (
+                            skin_name, (t8-t7), cmd))
 
                 if self.gen_report:
                     line_count = "20"
                     sql_name = "sql"
-                    log_cmd = ("%s \n\n %s \n" % (cmd, cmd_err))
-                    cmd_err = ''
+                    if len(cmd_err) > 1:
+                        log_cmd = ("%s \n\n %s \n" % (log_cmd, cmd_err))
+                        cmd_err = ''
                     self.report(self.inc_dir, carry_index, log_cmd,
-                                dump_file, d_base, line_count, sql_name, start_loop)
+                          dump_file, d_base, line_count, sql_name, start_loop)
                     carry_index = link_index
                     start_loop = strt_loop
 
@@ -469,13 +485,14 @@ class SqlBackup(SearchList):
 
             tl = open(self.tail_file, 'w')
             tl.write('\n<a id="disk"></a><a href="#Top">Back to top</a><h2>'
-                       ' Disk Usage: </h2>&nbsp;&nbsp;&nbsp;&nbsp;\n<pre class="gry">')
+                       ' Disk Usage: </h2>&nbsp;&nbsp;&nbsp;&nbsp;\n'
+                       '<pre class="gry">')
             tl.close()
             os.system("df -h >> %s" % self.tail_file)
             tl = open(self.tail_file, 'a')
             tl.write('</pre><hr>\n<a id="memory"></a><a href="#Top">Back to top'
                      '</a><h2> Memory Usage: </h2>&nbsp;&nbsp;&nbsp;&nbsp;\n'
-		     '<pre class="gry">')
+                     '<pre class="gry">')
             tl.close()
             os.system("free -h >> %s" % self.tail_file)
             tl = open(self.tail_file, 'a')
@@ -488,7 +505,7 @@ class SqlBackup(SearchList):
             tl.write("</pre>")
             tl.close()
 
-            # add debug extras to sqlbackup.html
+            # add debug extras to sqlbackup/index.html
             if self.sql_debug >= 4 :
                 tl = open(self.tail_file, 'a')
                 tl.write('<hr>\n<h2> DEBUG output</h2>\n'
@@ -496,8 +513,9 @@ class SqlBackup(SearchList):
                            '<h2> Log snippet: </h2>&nbsp;&nbsp;&nbsp;&nbsp;\n'
                            '<pre class="gry">')
                 tl.close()
-                # sanitize the output. If we get a cheetahgenerator error referencing
-                # an #include we risk getting stuck in a loop, in a loop.
+                # sanitize the output. If we get a cheetahgenerator error
+                # referencing an #include we risk getting stuck in a
+                # loop, in a loop.
                 os.system("grep /var/log/syslog -e '#' -v|grep  -e 'sqlbackup'"
                           "| tail -n50 >> %s"% self.tail_file)
 
@@ -516,7 +534,8 @@ class SqlBackup(SearchList):
                          '<h2>sqlite files: </h2>&nbsp;&nbsp;&nbsp;&nbsp;\n'
                          '<pre class="gry">\n%s\n\n' % dump_dir)
                 tl.close()
-                os.system("ls -gtr %s | tail -n10 >> %s" % (dump_dir,self.tail_file))
+                os.system("ls -gtr %s | tail -n10 >> %s" % (
+                          dump_dir,self.tail_file))
 
                 tl = open(self.tail_file, 'a')
                 tl.write('</pre>\n')
@@ -546,9 +565,9 @@ class SqlBackup(SearchList):
 
     def report(self, inc_dir, carry_index, log_cmd, dump_file, data_base,
                line_count, sql_name, start_loop):
-            # If we're reporting then we need to build the text output as we loop
-            # through the databases. We can do more than one when we specify a
-            # space seperated list in skin.conf
+            # If we're reporting then we need to build the text output as we
+            # loop through the databases. We can do more than one when we
+            # specify a space seperated list in skin.conf
             # Create output for a report using templates *.inc
             global link_index
             global strt_loop
@@ -604,7 +623,8 @@ class SqlBackup(SearchList):
 
             if weewx.debug >= 2 or self.sql_debug >= 2 :
                 t4= time.time()
-                loginf("%s DEBUG: Created %s in %.2f secs" % (skin_name, inc_file, t4-t3))
+                loginf("%s DEBUG: Created %s in %.2f secs" % (
+                       skin_name, inc_file, t4-t3))
 
             return (link_index, strt_loop)
 
