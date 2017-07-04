@@ -151,7 +151,7 @@ class SqlBackup(SearchList):
         self.host: mysql database location; defaults to weewx.conf value. Can be
          overwritten via skin.conf.
         self.myd_base: mysql database name; defaults to 'None' (see nect)
-        self.d_base: sqlite database name; defaults to'None'. If both these
+        self.sq_dbase: sqlite database name; defaults to'None'. If both these
          values are None in skin.conf, it will defaulkt to the weewx.conf default
          database. Supplying a value other than none in skin.conf will override
          that behaviour. This is useful to backup multiple databases using a space
@@ -175,6 +175,8 @@ class SqlBackup(SearchList):
          to /tmp/sqlbackup. These are temporary files only , but are needed for
          the cheetah templates (see Seasons skin in newskin branch or latest
          release) They aren't persistent so /tmp is a good spot.
+        self.ob_fuscate: hide_password from logs. Default is True, set to False
+         if you really, really want to bypass this small bit of obscurity.
         """
 
         t1 = time.time() # this process's start time
@@ -206,19 +208,19 @@ class SqlBackup(SearchList):
             self.host = self.generator.config_dict['DatabaseTypes']['MySQL'].get('host')
 
         self.myd_base = self.generator.skin_dict[skin_name].get('mysql_database','')
-        self.d_base = self.generator.skin_dict[skin_name].get('sql_database','')
-        if not self.myd_base and not self.d_base:
-            defd_base = self.generator.config_dict['DataBindings']['wx_binding'].get('database')
+        self.sq_dbase = self.generator.skin_dict[skin_name].get('sql_database','')
+        if not self.myd_base and not self.sq_dbase:
+            def_dbase = self.generator.config_dict['DataBindings']['wx_binding'].get('database')
             if self.sql_debug >= 5 :
-                loginf("%s 5:1 weewx.conf database is %s" % (skin_name, defd_base))
-            if defd_base == 'archive_mysql':
-                self.myd_base = self.generator.config_dict['Databases'][defd_base].get('database_name')
+                loginf("%s 5:1 weewx.conf database is %s" % (skin_name, def_dbase))
+            if def_dbase == 'archive_mysql':
+                self.myd_base = self.generator.config_dict['Databases'][def_dbase].get('database_name')
                 if self.sql_debug >= 5 :
                     loginf("%s 5:2 so weewx.conf mysql database is %s" % (skin_name, self.myd_base))
-            elif defd_base == 'archive_sqlite':
-                self.d_base = self.generator.config_dict['Databases'][defd_base].get('database_name')
+            elif def_dbase == 'archive_sqlite':
+                self.sq_dbase = self.generator.config_dict['Databases'][def_dbase].get('database_name')
                 if self.sql_debug >= 5 :
-                    loginf("%s 5:3 so weewx.conf sqlite database is %s" % (skin_name, self.d_base))
+                    loginf("%s 5:3 so weewx.conf sqlite database is %s" % (skin_name, self.sq_dbase))
         self.table = self.generator.skin_dict[skin_name].get('sql_table','archive')
         self.mybup_dir = self.generator.skin_dict[skin_name].get('mysql_bup_dir','/var/backups/mysql')
         self.bup_dir = self.generator.skin_dict[skin_name].get('sql_bup_dir','/var/backups/sql')
@@ -226,6 +228,7 @@ class SqlBackup(SearchList):
         self.t_label = self.generator.skin_dict[skin_name].get('sql_label','daily')
         self.dated_dir = to_bool(self.generator.skin_dict[skin_name].get('sql_dated_dir', True))
         self.gen_report = to_bool(self.generator.skin_dict[skin_name].get('sql_gen_report', True))
+        self.ob_fuscate = to_bool(self.generator.skin_dict[skin_name].get('hide_password', True))
         self.inc_dir = self.generator.skin_dict[skin_name].get('inc_dir', '/tmp/sqlbackup')
 
         if self.sql_debug >= 5 : # sanity check for releases - safely ignored!
@@ -237,13 +240,14 @@ class SqlBackup(SearchList):
             loginf("%s 5: using sql_debug level of %s" % (skin_name, self.sql_debug))
             loginf("%s 5: generate report is %s" % (skin_name, self.gen_report))
             loginf("%s 5: mysql databases selected: %s" % (skin_name, self.myd_base))
-            loginf("%s 5: sql databases selected: %s" % (skin_name, self.d_base))
+            loginf("%s 5: sql databases selected: %s" % (skin_name, self.sq_dbase))
+            loginf("%s 5: hide password is %s ?" % (skin_name, self.ob_fuscate))
 
         carry_index = '<hr><b>Databases :: </b>'
         start_loop = 0
         e = ''
-        #cmd_err = log_cmd = ''
-        cmd_err = ''
+        cmd_err = log_cmd = ''
+        #cmd_err = ''
 
         # Strictly speaking. If we're not generating reports then the following
         # is redundant but we'll leave the structure in place as we do generate
@@ -390,9 +394,14 @@ class SqlBackup(SearchList):
                 f.close()
                 t6 = time.time() # this loops finishing  time
 
-                # obfuscate for logs
-                log_cmd = cmd.replace(self.user ,"XxXxX" )
-                log_cmd = log_cmd.replace(self.passwd ,"XxXxX" )
+                # obfuscate for logs: hide_password = True as default
+                # This will replace ALL occurences of the string - if your
+                # database name is the same, that will be obfuscated too!
+                if self.ob_fuscate:
+                    log_cmd = cmd.replace(self.user ,"XxXxX" )
+                    log_cmd = log_cmd.replace(self.passwd ,"XxXxX" )
+                else:
+                   log_cmd = cmd
                 if weewx.debug >= 2 or self.sql_debug >= 2:
                     loginf("%s DEBUG: %.2f secs to run %s" % (
                             skin_name, (t6-t5), log_cmd))
@@ -409,8 +418,8 @@ class SqlBackup(SearchList):
                     start_loop = strt_loop
 
         # Start the sqlite dump process
-        if self.d_base:
-            self.dbase = self.d_base.split()
+        if self.sq_dbase:
+            self.dbase = self.sq_dbase.split()
             dbase_len = len(self.dbase)
             if weewx.debug >= 2 or self.sql_debug >= 2:
                 loginf("%s DEBUG: databases, sqlite %s named %s" %
@@ -450,7 +459,6 @@ class SqlBackup(SearchList):
                         cmd_err = ''
                     else:
                         log_cmd = cmd
-                        cmd_err = ''
                     self.report(self.inc_dir, carry_index, log_cmd,
                           dump_file, d_base, line_count, sql_name, start_loop)
                     carry_index = link_index
