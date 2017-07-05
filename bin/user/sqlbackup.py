@@ -434,6 +434,9 @@ class SqlBackup(SearchList):
                 # We pass a '|' and this also requires shell=True
                 cmd = "echo '.dump %s' | sqlite3 /var/lib/weewx/%s.sdb" % (
                          self.table, d_base)
+                #ToDo - explore this style - no pipe.
+                #cmd = "sqlite3 /var/lib/weewx/%s.sdb '.dump %s'" % (
+                #         d_base, self.table)
 
                 dumpcmd = subprocess.Popen(cmd, stdout=subprocess.PIPE,
                                       stderr=subprocess.PIPE, shell=True)

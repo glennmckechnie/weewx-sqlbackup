@@ -40,10 +40,10 @@ Because this has since expanded to incorporate sqlite databases, where it captur
 <p>With the variation in weeWX setups, the only way to know how it will work for you is to give it a try. Just start off gently and DON'T ask for too much at once, be conservative with what you're asking for.</p>
 <h2 id="installation">Installation</h2><a href="#Top">Back to top</a>
 
-<p>This SLEs prerequisites are
+<p>This SLE's prerequisites are
 <ul>
  <li>sqlite3 (Which I don't think is installed by default?)
- <li>mysqldump (Which is part of the default mysql install.)
+ <li>mysqldump (Which is part of the default mysql install. If you don't have a mysql database you won't need it, it will be ignored.)
 </ul>
 Everything else should be there already as they are listed under Debian as [essential] packages, except 'free' but I believe that's also included on a default install.</p>
 
@@ -128,9 +128,9 @@ It's well commented :-)</p>
 # Copyright (c) 2017 Glenn McKechnie glenn.mckechnie   gmail.com              #
 # With credit to Tom Keffer tkeffer   gmail.com                               #
 #                                                                             #
-#  SQLDUMP CONFIGURATION FILE                                                 #
-#  This 'report' generates gzipped backup files from a running weewx          #
-#  database.                                                                  #
+# SQLBACKUP CONFIGURATION FILE                                                #
+#  This 'report' generates gzipped sql files backup files from a running      #
+#  weewx database.                                                            #
 #                                                                             #
 ###############################################################################
 #
@@ -138,21 +138,22 @@ It's well commented :-)</p>
 # see http://www.weewx.com/docs/customizing.htm#customizing_gen_time
 #
 #  4 min after, every 12 hours
-#report_timing  = '4 */12 * * *'
+report_timing  = '4 */12 * * *'
 
 # First time? Need a refresher? There's a README.md file in the skins directory
-# or sqlbackupREADME.html on your weewx server.
+# or sqlbackup/sqlbackupREADME.html on your web server for detailed instructions.
 
-[sqlbackup]  # This section heading is lower case to enable report duplication.
+[sqlbackup] # This section heading is all lower case to enable skin duplication.
 
         #sql_user = "your_user_if_different_to_weewx.conf"
-        #sql_host = "localhost_is_the_default"
+        # default is preset as localhost
+        #sql_host = "localhost"
         # default is preset as weewx
         #sql_pass = "your_password_if_different_to_weewx.conf"
 
-        # default database is read from weewx.conf. Can be overidden here. Specify
-        # here for multiple databases
-        #mysql_database = "weatherpi mesoraw"
+        # default database is read from weewx.conf. Can be overidden here.
+        # Use a space seperated list for multiple databases.
+        #mysql_database = "weatherp mesoraw"
         #sql_database = "pmon weewx"
 
         # default is preset as 'archive' Change to '' to dump the dailies as well.
@@ -162,28 +163,30 @@ It's well commented :-)</p>
         mysql_bup_dir = "/opt/backups/mysql-backups"
         # default is preset as /var/backups
         sql_bup_dir = "/opt/backups/sql-backups"
-        # a dated_dir structure is preset to "True" To disable uncomment the following
+        # a dated_dir structure is preset to "True" To disable uncomment the
+        # following
         #sql_dated_dir = 'False'
 
-        # generate a summary report for the last run. Useful for obvious errors, not useful
-        # for serious testing - test your backups to ensure they actually do what you want!
+        # generate a summary report for the last run. Useful for obvious errors,
+        # not useful for serious testing - test your backups to ensure they
+        # actually do what you want!
         # Default is preset to "True" To disable uncomment the following line.
         #sql_gen_report = 'False'
 
         # these need to match, and the user needs do it for now
         # 86400 seconds = 24 hours # 604800 seconds = 7 days
-        # This value will be increased by 900 seconds to ensure backups overlap
-        #sql_period = "604800" # time in seconds ('86400 + 900' is the default setting)
-        #sql_label = "7days" # meaningful (to you) string for the filename ('daily' is default)
+        # This will be increased by 900 seconds (86400 + 900) to ensure backups
+        # overlap
+        #sql_period = "604800" # time in seconds ('86400' is the default setting)
+        #sql_label = "7days" # meaningful string for the filename, use text to
 
-        # Local debugging, ie: for this skin only
-        # Default is preset to "0" so commenting it out will disable DEBUG output from this skin
+        # Default is preset to "0" so commenting it out will disable DEBUG logging
+        # from this skin (will also log when weewx.conf debug is set to "2")
         # Set sql_debug to "2" for extra DEBUG info in the logs.
-        # (It will also log when the global weewx.conf debug is set to "2")·
-        # Set sql_debug to "4" for extra DEBUG info in the report page - sqlbackup/index.html
+        # Set sql_debug to "4" for extra DEBUG info in the report page
+        # sqlbackup/index.html
         sql_debug = "4"
 ###############################################################################
-
 </pre>
 
 <h3 id="working-with-the-dump-files">Working with the MySQL dump files</h3><a href="#Top">Back to top</a>
