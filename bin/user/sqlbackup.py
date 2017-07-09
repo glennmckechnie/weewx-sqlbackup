@@ -331,24 +331,6 @@ class SqlBackup(SearchList):
         mydump_dir = self.mybup_dir + "%s" % (date_dir_str)
         dump_dir = self.bup_dir + "%s" % (date_dir_str)
 
-        if not os.path.exists(mydump_dir):
-            try:
-                os.makedirs(mydump_dir)
-            except OSError,e:
-                loginf("%s: ERR  %s" % (skin_name, e))
-                return
-
-        if not os.path.exists(dump_dir):
-            try:
-                os.makedirs(dump_dir)
-            except OSError,e:
-                loginf("%s: ERR  %s" % (skin_name, e))
-                return
-
-        if weewx.debug >= 2 or self.sql_debug >= 2:
-           loginf("%s DEBUG: directory for backup files - %s, sqlite files %s" % (
-              skin_name, mydump_dir,dump_dir))
-
         # Start the mysql dump process
         if self.myd_base:
             self.mydbase = self.myd_base.split()
@@ -356,6 +338,16 @@ class SqlBackup(SearchList):
             if weewx.debug >= 2 or self.sql_debug >= 2 :
                 loginf("%s DEBUG: databases, mysql %s named %s" % (
                     skin_name, mydbase_len, self.mydbase))
+            if not os.path.exists(mydump_dir):
+                try:
+                    os.makedirs(mydump_dir)
+                except OSError,e:
+                    loginf("%s: ERR  %s" % (skin_name, e))
+                    return
+            if weewx.debug >= 2 or self.sql_debug >= 2:
+               loginf("%s DEBUG: directory for mysql backup files %s" % (
+                   skin_name ,mydump_dir))
+
             for step in range(mydbase_len):
                 t5 = time.time() # this loops start time
                 myd_base = self.mydbase[step]
@@ -424,6 +416,16 @@ class SqlBackup(SearchList):
             if weewx.debug >= 2 or self.sql_debug >= 2:
                 loginf("%s DEBUG: databases, sqlite %s named %s" %
                     (skin_name, dbase_len, self.dbase))
+            if not os.path.exists(dump_dir):
+                try:
+                    os.makedirs(dump_dir)
+                except OSError,e:
+                    loginf("%s: ERR  %s" % (skin_name, e))
+                    return
+            if weewx.debug >= 2 or self.sql_debug >= 2:
+               loginf("%s DEBUG: directory for sqlite backup files %s" % (
+                   skin_name, dump_dir))
+
             for step in range(dbase_len):
                 t7 = time.time() # this loops start time
                 d_base = self.dbase[step]
