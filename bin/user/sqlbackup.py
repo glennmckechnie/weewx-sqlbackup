@@ -150,9 +150,9 @@ class SqlBackup(SearchList):
         overwritten via skin.conf
         self.host: mysql database location; defaults to weewx.conf value. Can be
          overwritten via skin.conf.
-        self.myd_base: mysql database name; defaults to 'None' (see nect)
+        self.myd_base: mysql database name; defaults to 'None' (see next entry)
         self.sq_dbase: sqlite database name; defaults to'None'. If both these
-         values are None in skin.conf, it will defaulkt to the weewx.conf default
+         values are None in skin.conf, it will default to the weewx.conf default
          database. Supplying a value other than none in skin.conf will override
          that behaviour. This is useful to backup multiple databases using a space
          seperated list.
@@ -432,7 +432,7 @@ class SqlBackup(SearchList):
                 dump_file = dump_dir + "/%s-host.%s-%s-%s.gz"  % (
                                d_base, this_host, file_stamp, self.t_label)
                 # We pass a '|' and this also requires shell=True
-                cmd = "echo '.dump %s' | sqlite3 /var/lib/weewx/%s.sdb" % (
+                cmd = "echo '.dump %s' | sqlite3 /var/lib/weewx/%s" % (
                          self.table, d_base)
                 #ToDo - explore this style - no pipe.
                 #cmd = "sqlite3 /var/lib/weewx/%s.sdb '.dump %s'" % (
