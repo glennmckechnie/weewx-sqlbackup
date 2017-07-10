@@ -154,10 +154,16 @@ class SqlBackup(SearchList):
         self.sq_dbase: sqlite database name; defaults to'None'. If both these
          values are None in skin.conf, it will default to the weewx.conf default
          database. Supplying a value other than none in skin.conf will override
-         that behaviour. This is useful to backup multiple databases using a space
-         seperated list.
+         that behaviour. This is useful to backup multiple databases using a
+         space seperated list.
         self.table: mysql / sqlite tables to dump; This defaults to 'archive'.
-        Use '' to specify 'all' tables.
+         Works on full sqlite .dump only.   Use '' to specify 'all' tables.
+        self.sqtable: sqlite tables to dump when doing a partial dump; This
+         defaults to 'archive' and unless you have a really, really good reason
+         - don't change it. This is not listed in the skin.conf file for that
+         reason.
+        self.sq_part: Default is True, to perform a partial dump of sqlite.
+         Previously it was limited to a full dump, which equates to False
         self.mybup_dir: mysql backup directory; defaults to '/var/backups/mysql'
         self.bup_dir: sqlite backup directory; defaults to '/var/backups/sql'
         self.t_period: mysql; time period for dump; defaults to 86400
@@ -206,6 +212,7 @@ class SqlBackup(SearchList):
         self.host = self.generator.skin_dict[skin_name].get('sql_host')
         if not self.host:
             self.host = self.generator.config_dict['DatabaseTypes']['MySQL'].get('host')
+        self.sq_root = self.generator.config_dict['DatabaseTypes']['SQLite'].get('SQLITE_ROOT')
 
         self.myd_base = self.generator.skin_dict[skin_name].get('mysql_database','')
         self.sq_dbase = self.generator.skin_dict[skin_name].get('sql_database','')
@@ -222,6 +229,8 @@ class SqlBackup(SearchList):
                 if self.sql_debug >= 5 :
                     loginf("%s 5:3 so weewx.conf sqlite database is %s" % (skin_name, self.sq_dbase))
         self.table = self.generator.skin_dict[skin_name].get('sql_table','archive')
+        self.sqtable = self.generator.skin_dict[skin_name].get('sqlite_table','archive')
+
         self.mybup_dir = self.generator.skin_dict[skin_name].get('mysql_bup_dir','/var/backups/mysql')
         self.bup_dir = self.generator.skin_dict[skin_name].get('sql_bup_dir','/var/backups/sql')
         self.t_period = self.generator.skin_dict[skin_name].get('sql_period','86400')
@@ -229,6 +238,7 @@ class SqlBackup(SearchList):
         self.dated_dir = to_bool(self.generator.skin_dict[skin_name].get('sql_dated_dir', True))
         self.gen_report = to_bool(self.generator.skin_dict[skin_name].get('sql_gen_report', True))
         self.ob_fuscate = to_bool(self.generator.skin_dict[skin_name].get('hide_password', True))
+        self.sq_part = to_bool(self.generator.skin_dict[skin_name].get('part_sqlite', True))
         self.inc_dir = self.generator.skin_dict[skin_name].get('inc_dir', '/tmp/sqlbackup')
 
         if self.sql_debug >= 5 : # sanity check for releases - safely ignored!
@@ -429,16 +439,61 @@ class SqlBackup(SearchList):
             for step in range(dbase_len):
                 t7 = time.time() # this loops start time
                 d_base = self.dbase[step]
+
+                # one-shot pass to get a header file - used for table reconstruction
+		# for partial dumps, could be useful for full?
+                schema_file = dump_dir + "/%s-host.%s-schema.sql" % (
+                                   d_base, this_host )
+                if not os.path.isfile(schema_file):
+
+                   cmd = ("sqlite3 %s/%s '.schema %s'" % (
+                          self.sq_root, d_base, self.sqtable))
+                   #cmd = ("sqlite3 -header -insert /var/lib/weewx/%s "
+                   #       "'SELECT * from archive where dateTime = "
+                   #       " (select max (dateTime) from archive );'" % (d_base))
+                   headcmd = subprocess.Popen(cmd, stdout=subprocess.PIPE,
+                                     stderr=subprocess.PIPE, shell=True)
+                   hed_output, hed_err = headcmd.communicate()
+                   #dumpoutput = dump_output.encode("utf-8").strip()
+                   if hed_err:
+                       cmd_err = ("%s  ERROR : %s)" % (skin_name, hed_err))
+                       logerr(cmd_err)
+                   with open(schema_file, 'w+') as f:
+                       f.write(hed_output)
+                   f.close()
+
                 if weewx.debug >= 2 or self.sql_debug >= 2:
                     loginf("%s DEBUG:  sql database is %s" % (skin_name, d_base))
-                dump_file = dump_dir + "/%s-host.%s-%s-%s.gz"  % (
-                               d_base, this_host, file_stamp, self.t_label)
+                #dump_file = dump_dir + "/%s-host.%s-%s-%s.gz"  % (
+                #               d_base, this_host, file_stamp, self.t_label)
+                #loginf("%s DEBUG           : dump_file for sqlite backup files %s" % (
+                #   skin_name, dump_dir))
                 # We pass a '|' and this also requires shell=True
-                cmd = "echo '.dump %s' | sqlite3 /var/lib/weewx/%s" % (
-                         self.table, d_base)
-                #ToDo - explore this style - no pipe.
-                #cmd = "sqlite3 /var/lib/weewx/%s.sdb '.dump %s'" % (
-                #         d_base, self.table)
+                #cmd = "echo '.dump %s' | sqlite3 /var/lib/weewx/%s" % (
+                        # self.table, d_base)
+                # csv method
+                # https://sqlite.org/cli.html
+                #cmd = ("sqlite3 -insert /var/lib/weewx/%s "
+                #       " 'SELECT * from archive where dateTime > %s;'" % (
+                #         d_base, past_time))
+                if self.sq_part:
+                    dump_file = dump_dir + "/%s-host.%s-%s-%s.gz"  % (
+                                   d_base, this_host, file_stamp, self.t_label)
+                    if weewx.debug >= 2 or self.sql_debug >= 2:
+                        loginf("%s DEBUG           : dump_file for sqlite backup files %s" % (
+                            skin_name, dump_dir))
+                    cmd = ("sqlite3 %s/%s '.mode \"insert\" \"%s\"', "
+                           " 'SELECT * from %s where dateTime > %s;'" % (
+                             self.sq_root, d_base, self.sqtable, self.sqtable,
+                             past_time))
+                else:
+                    dump_file = dump_dir + "/%s-host.%s-%s-full.gz"  % (
+                                   d_base, this_host, file_stamp, self.t_label)
+                    if weewx.debug >= 2 or self.sql_debug >= 2:
+                        loginf("%s DEBUG           : dump_file for sqlite backup files %s" % (
+                            skin_name, dump_dir))
+                    cmd = "echo '.dump %s' | sqlite3 %s/%s" % (
+                             self.table, self.sq_root, d_base)
 
                 dumpcmd = subprocess.Popen(cmd, stdout=subprocess.PIPE,
                                       stderr=subprocess.PIPE, shell=True)
