@@ -122,8 +122,8 @@ Sat  2 Jan 18:35:00 AEDT 2016
 
 <h3><a id="configuring-partial-dump">Configuring: skin.conf</a></h3><a href="#Top">Back to top</a>
 
-<p>The skin.conf file may appear overwhelming but it should run with the values that are pre-configured.
-If not wade through it and find what needs tweaking.
+<p>The skin.conf file as installed is a simplified version and should run as is. ie: it should pick up the default user, password, database settings as configured in your weewx.conf file. It will then do one 24 hour snapshot (+ 900 seconds for overlap) at 2 min past midnight, every day. It will fit most cases with some timing and backup location tweaks.<br />
+There are other options that don't appear but can be set, these are included in the listing below.
 
 It's well commented :-)</p>
 
@@ -141,48 +141,68 @@ It's well commented :-)</p>
 # Report timing:
 # see http://www.weewx.com/docs/customizing.htm#customizing_gen_time
 #
-#  4 min after, every 12 hours
-report_timing  = '4 */12 * * *'
+# You are strongly encouraged to use the report timing feature to limit this
+# skin to the occasional, suitably sized (see sql_period) time span.
+# The default is 24 hours of the main database, taken daily.
+# Tweak to suit. Test the result.
+#
+#   2 min after midnight
+report_timing = '2 0 * * *'
 
-# First time? Need a refresher? There's a README.md file in the skins directory
-# or sqlbackup/sqlbackupREADME.html on your web server for detailed instructions.
+# First time? Need a refresher? There's a html README file in the skins directory
+# sqlbackup/sqlbackupREADME.html which can be found on your weewx web server.
+# Not all options are listed below, see the html README if needed.
 
 [sqlbackup] # This section heading is all lower case to enable skin duplication.
 
         #sql_user = "your_user_if_different_to_weewx.conf"
-        # default is preset as localhost
-        #sql_host = "localhost"
-        # default is preset as weewx
         #sql_pass = "your_password_if_different_to_weewx.conf"
 
-        # default database is read from weewx.conf. Can be overidden here.
+        # default is preset as localhost
+        #sql_host = "localhost"
+
+        # The default database is read from weewx.conf. It can be overidden here.
         # Use a space seperated list for multiple databases.
         #mysql_database = "weatherp mesoraw"
         #sql_database = "pmon.sdb weewx.sdb"
 
-        # default is preset as 'archive' Change to '' to dump the dailies as well.
+        # Default is preset as 'archive' Change to '' to dump the dailies as well.
         # The daily tables get rebuilt when weewx restarts so we ignore them.
+        # If doing sqlite partial dumps, this option won't work. It's only valid
+        # for a full dump of sqlite, (mysql works for both full or partial dumps)
         #sql_table = ""
-        # default is preset as /var/backups
+
+        # The backup location default is preset as /var/backups
         mysql_bup_dir = "/opt/backups/mysql-backups"
-        # default is preset as /var/backups
         sql_bup_dir = "/opt/backups/sql-backups"
-        # a dated_dir structure is preset to "True" To disable uncomment the
-        # following
+
+        # A dated_dir structure. Defaults to 'True'. Turn it off with 'False'
+
         #sql_dated_dir = 'False'
 
-        # generate a summary report for the last run. Useful for obvious errors,
+        # Generate a summary report for the last run. Useful for obvious errors,
         # not useful for serious testing - test your backups to ensure they
         # actually do what you want!
         # Default is preset to "True" To disable uncomment the following line.
         #sql_gen_report = 'False'
 
-        # these need to match, and the user needs do it for now
-        # 86400 seconds = 24 hours # 604800 seconds = 7 days
-        # This will be increased by 900 seconds (86400 + 900) to ensure backups
-        # overlap
-        #sql_period = "604800" # time in seconds ('86400' is the default setting)
-        #sql_label = "7days" # meaningful string for the filename, use text to
+        # Time span for backups, it's encouraged to limit the backup to a small
+        # rolling window.
+        # sql_period, sql_label. The sql_label should match the sql_period, for
+        # your benefit, ie:  86400 seconds = 24 hours , 604800 seconds = 7 days
+        # This value will always be increased by 900 seconds (86400 + 900) to
+        # ensure backups overlap.
+        #sql_period = '604800' #time in seconds ('86400' is the default setting)
+        #sql_label = '7days' # ('daily' is the default) this isshould be  a
+        # meaningful string for the filename, use text to match your sql_period
+        # ##sql_period = '1262264400' # time in seconds (2 years)
+        # ##sql_label = '2years' # meaningful string for the filename
+
+        # Originally the sqlite databases were dumped in their entirety. This
+        # could place an excessive load on weewx. The default now is to always
+        # do partial dumps - True. Set to False for initial, full backups only?
+        # Use with discretion.
+        #part_sqlite = 'False
 
         # Default is preset to "0" so commenting it out will disable DEBUG logging
         # from this skin (will also log when weewx.conf debug is set to "2")
@@ -190,6 +210,16 @@ report_timing  = '4 */12 * * *'
         # Set sql_debug to "4" for extra DEBUG info in the report page
         # sqlbackup/index.html
         sql_debug = "4"
+
+        # The following should rarely, if ever need to be altered.
+
+        # hide_password: hide_password from logs. Default is True, set to False
+        # if you really, really want to bypass this small bit of obscurity.
+
+        # inc_dir: location of .inc files used in html generation; defaults
+        # to /tmp/sqlbackup. These are temporary files only, but are needed for
+        # the cheetah templates (see Seasons skin in newskin branch or latest
+        # release) They aren't persistent so /tmp is as good a spot as any.
 ###############################################################################
 </pre>
 

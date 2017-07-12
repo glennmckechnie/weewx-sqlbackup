@@ -133,6 +133,25 @@ class SqlBackup(SearchList):
         full description on this addition. There are many options
         eg:- '2 * * * 1' ,  @daily, @weekly, @monthly, etc
 
+
+        mysql, mariadb are interchangable. Where mysql is mentioned, mariadb
+        also applies
+
+        sql_period: mysql; time period for dump; defaults to 86400
+         seconds (24hours)
+        sql_label: mysql; text label to match above. This has meaning
+         to you.
+        self.mybup_dir: mysql backup directory; defaults to '/var/backups/mysql'
+        self.bup_dir: sqlite backup directory; defaults to '/var/backups/sql'
+        sql_dated_dir: optional string to append to self.xxx_dir. It will be of
+         the form 20171231 The default is true. Useful if backups are taken often
+         Possibly not so useful if only occasional.
+        sql_gen_report: optional html report, helps with quick status check and
+         is the only way to catch any errors - std output is directed to the
+         bup_file so thats where they are found. The report shows enough to
+         identify these.
+        part_sqlite: Default is True, to perform a partial dump of sqlite.
+         Previously it was limited to a full dump, which equates to False
         self.sql_debug: Used to include additional info in logs, or optional
          html report. default is off, although the newly installed skin comes
          with it turned on.
@@ -141,59 +160,45 @@ class SqlBackup(SearchList):
          4 includes the above info in the optional html report.
          5 is bordering on absurd (it's used for release testing.)
 
-        mysql, mariadb are interchangable. Where mysql is mentioned, mariadb
-        also applies
+	The following are not listed in the skin.conf file for whatever reason.
+	Mostly to avoid confusion in an already wordy config file. They come
+	under the umbrella of advanced, or rarely used options but could,
+	can, might prove handy at times!
 
-        self.user: mysql user; defaults to weewx.conf value. Can be overwritten
+        sql_user: mysql user; defaults to weewx.conf value. Can be overwritten
          via skin.conf
-        self.passwd: mysql password; defaults to weewx.conf value. Can be
+        sql_pass: mysql password; defaults to weewx.conf value. Can be
         overwritten via skin.conf
-        self.host: mysql database location; defaults to weewx.conf value. Can be
+        sql_host: mysql database location; defaults to weewx.conf value. Can be
          overwritten via skin.conf.
-        self.myd_base: mysql database name; defaults to 'None' (see next entry)
-        self.sq_dbase: sqlite database name; defaults to'None'. If both these
+        mysql_database: mysql database name; defaults to 'None' (see next entry)
+        sql_database: sqlite database name; defaults to'None'. If both these
          values are None in skin.conf, it will default to the weewx.conf default
          database. Supplying a value other than none in skin.conf will override
          that behaviour. This is useful to backup multiple databases using a
          space seperated list.
-        self.table: mysql / sqlite tables to dump; This defaults to 'archive'.
+        sql_table: mysql / sqlite tables to dump; This defaults to 'archive'.
          Works on full sqlite .dump only.   Use '' to specify 'all' tables.
-        self.sqtable: sqlite tables to dump when doing a partial dump; This
+        sqlite_table: sqlite tables to dump when doing a partial dump; This
          defaults to 'archive' and unless you have a really, really good reason
-         - don't change it. This is not listed in the skin.conf file for that
-         reason.
-        self.sq_part: Default is True, to perform a partial dump of sqlite.
-         Previously it was limited to a full dump, which equates to False
-        self.mybup_dir: mysql backup directory; defaults to '/var/backups/mysql'
-        self.bup_dir: sqlite backup directory; defaults to '/var/backups/sql'
-        self.t_period: mysql; time period for dump; defaults to 86400
-         seconds (24hours)
-        self.t_label: mysql; text label to match above. This has meaning
-         to you.
-        self.dated_dir: optional string to append to self.xxx_dir. It will be of
-         the form 20171231 The default is true. Useful if backups are taken often
-         Possibly not so useful if only occasional.
-        self.gen_report: optional html report, helps with quick status check and
-         is the only way to catch any errors - std output is directed to the
-         bup_file so thats where they are found. The report shows enough to
-         identify these.
-        self.inc_dir: location of .inc files used in html generation; defaults
+         - don't change it.
+        hide_password: hide_password from logs. Default is True, set to False
+         if you really, really want to bypass this small bit of obscurity.
+        inc_dir: location of .inc files used in html generation; defaults
          to /tmp/sqlbackup. These are temporary files only , but are needed for
          the cheetah templates (see Seasons skin in newskin branch or latest
          release) They aren't persistent so /tmp is a good spot.
-        self.ob_fuscate: hide_password from logs. Default is True, set to False
-         if you really, really want to bypass this small bit of obscurity.
         """
 
         t1 = time.time() # this process's start time
 
-        # This probably abuses the weewx naming practice but it enables re-use of
-        # the skin (seperate reports) with different values:
-        # possibly databases, time_periods, all with their own report_timing stanzas
-        # of their own.
-        # If multiple skins are configured then it's probably best not to use the
-        # @daily etc shortcuts but rather use the '5 * 7 * *' style as the minutes
-        # can then be adjusted to prevent clashes were they to coincide.
+        # This probably abuses the weewx naming practice but it enables re-use
+	# of the skin (seperate reports) with different values:
+        # possibly databases, time_periods, all with their own report_timing
+	# stanzas of their own.
+        # If multiple skins are configured then it's probably best not to use
+	# the @daily etc shortcuts but rather use the '5 * 7 * *' style as the
+	# minutes can then be adjusted to prevent clashes were they to coincide.
         # skin_name also allows log messages to  reflect this skin re-use
         global skin_name
         skin_name =  self.generator.skin_dict['skin']
@@ -212,7 +217,6 @@ class SqlBackup(SearchList):
         self.host = self.generator.skin_dict[skin_name].get('sql_host')
         if not self.host:
             self.host = self.generator.config_dict['DatabaseTypes']['MySQL'].get('host')
-        self.sq_root = self.generator.config_dict['DatabaseTypes']['SQLite'].get('SQLITE_ROOT')
 
         self.myd_base = self.generator.skin_dict[skin_name].get('mysql_database','')
         self.sq_dbase = self.generator.skin_dict[skin_name].get('sql_database','')
@@ -237,9 +241,11 @@ class SqlBackup(SearchList):
         self.t_label = self.generator.skin_dict[skin_name].get('sql_label','daily')
         self.dated_dir = to_bool(self.generator.skin_dict[skin_name].get('sql_dated_dir', True))
         self.gen_report = to_bool(self.generator.skin_dict[skin_name].get('sql_gen_report', True))
-        self.ob_fuscate = to_bool(self.generator.skin_dict[skin_name].get('hide_password', True))
-        self.sq_part = to_bool(self.generator.skin_dict[skin_name].get('part_sqlite', True))
+        self.hide_pass = to_bool(self.generator.skin_dict[skin_name].get('hide_password', True))
+        self.part_sql = to_bool(self.generator.skin_dict[skin_name].get('part_sqlite', True))
         self.inc_dir = self.generator.skin_dict[skin_name].get('inc_dir', '/tmp/sqlbackup')
+	# no skin.conf option
+        self.sq_root = self.generator.config_dict['DatabaseTypes']['SQLite'].get('SQLITE_ROOT')
 
         if self.sql_debug >= 5 : # sanity check for releases - safely ignored!
             #loginf("%s 5: weewx.conf user is  %s" % (skin_name, self.user))
@@ -251,7 +257,7 @@ class SqlBackup(SearchList):
             loginf("%s 5: generate report is %s" % (skin_name, self.gen_report))
             loginf("%s 5: mysql databases selected: %s" % (skin_name, self.myd_base))
             loginf("%s 5: sql databases selected: %s" % (skin_name, self.sq_dbase))
-            loginf("%s 5: hide password is %s ?" % (skin_name, self.ob_fuscate))
+            loginf("%s 5: hide password is %s ?" % (skin_name, self.hide_pass))
 
         carry_index = '<hr><b>Databases :: </b>'
         start_loop = 0
@@ -399,7 +405,7 @@ class SqlBackup(SearchList):
                 # obfuscate for logs: hide_password = True as default
                 # This will replace ALL occurences of the string - if your
                 # database name is the same, that will be obfuscated too!
-                if self.ob_fuscate:
+                if self.hide_pass:
                     log_cmd = cmd.replace(self.user ,"XxXxX" )
                     log_cmd = log_cmd.replace(self.passwd ,"XxXxX" )
                 else:
@@ -476,7 +482,7 @@ class SqlBackup(SearchList):
                 #cmd = ("sqlite3 -insert /var/lib/weewx/%s "
                 #       " 'SELECT * from archive where dateTime > %s;'" % (
                 #         d_base, past_time))
-                if self.sq_part:
+                if self.part_sql:
                     dump_file = dump_dir + "/%s-host.%s-%s-%s.gz"  % (
                                    d_base, this_host, file_stamp, self.t_label)
                     if weewx.debug >= 2 or self.sql_debug >= 2:
