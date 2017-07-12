@@ -34,7 +34,7 @@
 <hr>
 <h2 id="sqlbackup-readme">SQLBackup README</h2>
 <p>This skin (<a href="https://github.com/glennmckechnie/weewx-sqlbackup">sqlbackup</a>) uses a Search List Extension (SLE) of the same name to call mysqldump and/or sqlite3 to dump data from the weeWX database.<br /> If it's MySQL (MariaDB) then it will dump a user specified timeframe; if it's sqlite then it will dump all of it. The default option for both cases is to only dump the archive tables.<br />It will do this at regular intervals as specified by the <a href="http://www.weewx.com/docs/customizing.htm#customizing_gen_time">report_timing</a> feature of weeWX.</p>
-<p>If you dump the whole database, and it's large, you can interfere with weeWXs operation and odd things may start to happen. This will depend on your CPU, database size, weeWX setup, maybe even the weather!<br />
+<p>If you dump the whole database, and it's large, you can interfere with weeWXs operation and odd things may start to happen. This will depend on your CPU, database size, archive_interval, main weewx duties/functions,  maybe even the weather!?<br />
 In most cases this probably won't matter too much and you'll just get a message about skipping reports. If we lock weeWX out of its database for too long though, the weird and wonderful may start to occur, so it's best we don't push it too far.
 </p>
 <p>This skin was originally configured for MySQL (MariaDB) databases only and we can configure mysqldump to do a partial dump. We can therefore limit ourselves to a small, very manageable portion of the database.<br />
