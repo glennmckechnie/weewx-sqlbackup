@@ -2,7 +2,7 @@
 
 
 
-This skin (sqlbackup) uses a Search List Extension (SLE) of the same name to call mysqldump and/or sqlite to dump data from the weeWX database.
+This skin (sqlbackup) uses a Search List Extension (SLE) of the same name to call mysqldump and/or sqlite3 to dump data from the weeWX database.
 If it's MySQL (MariaDB) then it will dump a user specified timeframe; if it's sqlite then it will dump all of it. The default option in both cases is to only dump the archive tables.
 It will do this at regular intervals as specified by the [report_timing](http://www.weewx.com/docs/customizing.htm#customizing_gen_time) feature of weeWX.
 
