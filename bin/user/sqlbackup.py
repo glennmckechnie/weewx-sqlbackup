@@ -2,6 +2,8 @@
 #    Copyright (c) 2017 Glenn McKechnie glenn.mckechnie@gmail.com>
 #    Credit to Tom Keffer <tkeffer@gmail.com>, Matthew Wall and the core
 #    weewx team, all from whom I've borrowed heavily.
+#    Mistakes are mine, corrections and or improvements welcomed
+#       https://github.com/glennmckechnie/weewx-sqlbackup
 #
 #    See the file LICENSE.txt for your full rights.
 #
@@ -45,7 +47,7 @@ class SqlBackup(SearchList):
     """ Notes and WARNINGS
 
     DON'T back the whole database up with this skin. You'll overload weewx and
-    weird things could happen. Report generation may be skipped.
+    weird things could happen. Report generation may be skipped as a result.
 
     The idea is to instead select a small rolling window from the database (if
     its a MySQL or MariaDB) and dump this at each report_timing interval. We
@@ -53,13 +55,14 @@ class SqlBackup(SearchList):
     At restore time we'll then need to select some or all of the dump files,
     and stitch them together as appropriate.
 
-    If it's an sqlite dtabase, it will dump it (them) all.
+    If it's an sqlite dtabase, it will dump it (them) all, or now the default
+    is to do as for mysql - a partial dump
 
     This skin was created to backup a mysql database that runs purely in
     memory, it has since evolved to include sqlite databases as well.
     Because running a database in memory is a little! fragile (to say the
     least.)
-    I configured my script to run every hour, and dumps the last 24 hours of
+    I configured my script to run every hour, and it dumps the last 24 hours of
     the database to the  xxsql_bup_file in the format...
          {database}-host.{hostname}-{epoch-timestamp}-{window-time-period}.gz
     eg:  weatherpi-host.masterofpis-201706132105-24hours.gz
@@ -95,11 +98,11 @@ class SqlBackup(SearchList):
     In short...
     Open skin.conf, modify the variables, turn on sql_debug - 2 or 4
 
-    To help speed up the process, bypass the report_timing setting and cycle
-    through the setup process quickly by copying and modifying a minimal
+    To help speed up the process, you can bypass the report_timing setting and
+    cycle through the setup process quickly by copying and modifying a minimal
     weewx.conf file as weewx.wee.conf and invoke that by using.
 
-    wee_reports /etc/weewx/weewx.wee.conf && tail -n20 /var/log/syslog |
+    wee_reports /etc/weewx/weewx.wee.conf && tail -n50 /var/log/syslog |
      grep wee_report
 
     then watch your logs, or the sqlbackup/index.html page if you're generating
@@ -158,12 +161,12 @@ class SqlBackup(SearchList):
          0 is off,
          2 is logging only (setting debug = 2 in weewx.conf will also work)
          4 includes the above info in the optional html report.
-         5 is bordering on absurd (it's used for release testing.)
+         ( 5 is used for release testing and can be safely ignored. )
 
-	The following are not listed in the skin.conf file for whatever reason.
-	Mostly to avoid confusion in an already wordy config file. They come
-	under the umbrella of advanced, or rarely used options but could,
-	can, might prove handy at times!
+        The following are not listed in the skin.conf file for whatever reason.
+        Mostly to avoid confusion in an already wordy config file. They come
+        under the umbrella of advanced, or rarely used options but could,
+        can, might prove handy at times!
 
         sql_user: mysql user; defaults to weewx.conf value. Can be overwritten
          via skin.conf
@@ -193,20 +196,16 @@ class SqlBackup(SearchList):
         t1 = time.time() # this process's start time
 
         # This probably abuses the weewx naming practice but it enables re-use
-	# of the skin (seperate reports) with different values:
+        # of the skin (seperate reports) with different values:
         # possibly databases, time_periods, all with their own report_timing
-	# stanzas of their own.
+        # stanzas of their own.
         # If multiple skins are configured then it's probably best not to use
-	# the @daily etc shortcuts but rather use the '5 * 7 * *' style as the
-	# minutes can then be adjusted to prevent clashes were they to coincide.
+        # the @daily etc shortcuts but rather use the '5 * 7 * *' style as the
+        # minutes can then be adjusted to prevent clashes were they to coincide.
         # skin_name also allows log messages to  reflect this skin re-use
         global skin_name
         skin_name =  self.generator.skin_dict['skin']
         self.skin_name = skin_name # for export to the template / html
-
-        # local debug switch "2" also = weewx.debug, "4" adds extra to html report page
-        # 5 is bordering on absurd (used for release testing)
-        self.sql_debug = int(self.generator.skin_dict[skin_name].get('sql_debug','0'))
 
         self.user = self.generator.skin_dict[skin_name].get('sql_user')
         if not self.user:
@@ -218,20 +217,20 @@ class SqlBackup(SearchList):
         if not self.host:
             self.host = self.generator.config_dict['DatabaseTypes']['MySQL'].get('host')
 
-        self.myd_base = self.generator.skin_dict[skin_name].get('mysql_database','')
+        self.my_dbase = self.generator.skin_dict[skin_name].get('mysql_database','')
         self.sq_dbase = self.generator.skin_dict[skin_name].get('sql_database','')
-        if not self.myd_base and not self.sq_dbase:
+        if not self.my_dbase and not self.sq_dbase:
             def_dbase = self.generator.config_dict['DataBindings']['wx_binding'].get('database')
             if self.sql_debug >= 5 :
-                loginf("%s 5:1 weewx.conf database is %s" % (skin_name, def_dbase))
+                logdbg("%s 5:1 weewx.conf database is %s" % (skin_name, def_dbase))
             if def_dbase == 'archive_mysql':
-                self.myd_base = self.generator.config_dict['Databases'][def_dbase].get('database_name')
+                self.my_dbase = self.generator.config_dict['Databases'][def_dbase].get('database_name')
                 if self.sql_debug >= 5 :
-                    loginf("%s 5:2 so weewx.conf mysql database is %s" % (skin_name, self.myd_base))
+                    logdbg("%s 5:2 so weewx.conf mysql database is %s" % (skin_name, self.my_dbase))
             elif def_dbase == 'archive_sqlite':
                 self.sq_dbase = self.generator.config_dict['Databases'][def_dbase].get('database_name')
                 if self.sql_debug >= 5 :
-                    loginf("%s 5:3 so weewx.conf sqlite database is %s" % (skin_name, self.sq_dbase))
+                    logdbg("%s 5:3 so weewx.conf sqlite database is %s" % (skin_name, self.sq_dbase))
         self.table = self.generator.skin_dict[skin_name].get('sql_table','archive')
         self.sqtable = self.generator.skin_dict[skin_name].get('sqlite_table','archive')
 
@@ -244,26 +243,44 @@ class SqlBackup(SearchList):
         self.hide_pass = to_bool(self.generator.skin_dict[skin_name].get('hide_password', True))
         self.part_sql = to_bool(self.generator.skin_dict[skin_name].get('part_sqlite', True))
         self.inc_dir = self.generator.skin_dict[skin_name].get('inc_dir', '/tmp/sqlbackup')
-	# no skin.conf option
+        # no skin.conf option
         self.sq_root = self.generator.config_dict['DatabaseTypes']['SQLite'].get('SQLITE_ROOT')
 
-        if self.sql_debug >= 5 : # sanity check for releases - safely ignored!
-            #loginf("%s 5: weewx.conf user is  %s" % (skin_name, self.user))
-            loginf("%s 5: weewx.conf user was used" % skin_name)
-            #loginf("%s 5: weewx.conf passwd is  %s" % (skin_name, self.passwd))
-            loginf("%s 5: weewx.conf passwd was used" % skin_name)
-            loginf("%s 5: weewx.conf host is  %s" % (skin_name, self.host))
-            loginf("%s 5: using sql_debug level of %s" % (skin_name, self.sql_debug))
-            loginf("%s 5: generate report is %s" % (skin_name, self.gen_report))
-            loginf("%s 5: mysql databases selected: %s" % (skin_name, self.myd_base))
-            loginf("%s 5: sql databases selected: %s" % (skin_name, self.sq_dbase))
-            loginf("%s 5: hide password is %s ?" % (skin_name, self.hide_pass))
+        # local (skin) debug switch "2" or weewx.debug, "4" adds extra to html
+        # report page
+        # 5 is for release testing only and can safely be ignored by users
+        self.sql_debug = int(self.generator.skin_dict[skin_name].get('sql_debug','0'))
+
+        # /usr/share/weewx/weewx/engine.py :850
+        if weewx.debug or self.sql_debug:
+            syslog.setlogmask(syslog.LOG_UPTO(syslog.LOG_DEBUG))
+            logdbg("%s DEBUG: using sql_debug of %s with weewx.debug of %s" % (
+                      skin_name, self.sql_debug, weewx.debug))
+        else:
+            syslog.setlogmask(syslog.LOG_UPTO(syslog.LOG_INFO))
+
+        if self.sql_debug >= 5 : # sanity check for releases - safely ignored.
+            #logdbg("%s 5: user is  %s" % (skin_name, self.user))
+            logdbg("%s 5: user was Ssssh!" % skin_name)
+            #logdbg("%s 5: passwd is  %s" % (skin_name, self.passwd))
+            logdbg("%s 5: passwd was Ssssh!" % skin_name)
+            logdbg("%s 5: host is %s" % (skin_name, self.host))
+            logdbg("%s 5: mysql database/s selected: %s" % (skin_name, self.my_dbase))
+            logdbg("%s 5: sqlite database/s selected: %s" % (skin_name, self.sq_dbase))
+            logdbg("%s 5: mysql table is %s" % (skin_name, self.table))
+            logdbg("%s 5: sqlite table is %s" % (skin_name, self.sqtable))
+            logdbg("%s 5: mysql backup dir is %s" % (skin_name, self.mybup_dir))
+            logdbg("%s 5: sqlite backup dir is %s" % (skin_name, self.bup_dir))
+            logdbg("%s 5: dated directory is %s" % (skin_name, self.dated_dir))
+            logdbg("%s 5: generate report is %s" % (skin_name, self.gen_report))
+            logdbg("%s 5: hide password is %s" % (skin_name, self.hide_pass))
+            logdbg("%s 5: sqlite method is %s" % (skin_name, self.part_sql))
+            logdbg("%s 5: using sql_debug level of %s" % (skin_name, self.sql_debug))
 
         carry_index = '<hr><b>Databases :: </b>'
         start_loop = 0
         e = ''
         cmd_err = log_cmd = ''
-        #cmd_err = ''
 
         # Strictly speaking. If we're not generating reports then the following
         # is redundant but we'll leave the structure in place as we do generate
@@ -275,19 +292,19 @@ class SqlBackup(SearchList):
         #   #        template = index.html.tmpl
         #
         # Back to it... Do the housework first, we clean out all the *.inc 's
-        # now rather  than later. This allows their content to be inspected
+        # now rather than later. This allows their content to be inspected
         # between runs.
         if os.path.exists(self.inc_dir):
             try:
                 shutil.rmtree(self.inc_dir)
             except OSError:
-                loginf("%s: ERR  %s" % (skin_name, e))
+                logerr("%s: ERR  %s" % (skin_name, e))
                 return
         if not os.path.exists(self.inc_dir):
             try:
                 os.makedirs(self.inc_dir)
             except OSError,e:
-                loginf("%s: ERR  %s" % (skin_name, e))
+                logerr("%s: ERR  %s" % (skin_name, e))
                 return
 
         self.all_file = "%s/alldumps.inc" % (self.inc_dir)
@@ -301,7 +318,7 @@ class SqlBackup(SearchList):
         try:
             chck = open(self.head_file, 'w+')
         except IOError, e:
-            loginf("%s: ERR  %s" % (skin_name, e))
+            logerr("%s: ERR  %s" % (skin_name, e))
             return
         chck.close()
 
@@ -319,7 +336,7 @@ class SqlBackup(SearchList):
         try:
             strt = open(self.links_file, 'w')
         except IOError, e:
-            loginf("%s: ERR  %s" % (skin_name, e))
+            logerr("%s: ERR  %s" % (skin_name, e))
             return
         strt.write(carry_index)
         strt.close()
@@ -337,9 +354,9 @@ class SqlBackup(SearchList):
         readable_time = (datetime.datetime.fromtimestamp(past_time).strftime(
             '%Y-%m-%d %H:%M:%S'))
         if weewx.debug >= 2 or self.sql_debug >= 2:
-            loginf("%s DEBUG: starting from %s" % (skin_name, readable_time))
+            logdbg("%s DEBUG: starting from %s" % (skin_name, readable_time))
         # If true, setup the remote directory name with a date structure
-        # eg: <path to backup directory>/2017/02/12/var/lib/weewx...
+        # eg: <path to backup directory>/2017/02/12/
         if self.dated_dir:
             date_dir_str = time.strftime("/%Y%m%d")
         else:
@@ -348,25 +365,26 @@ class SqlBackup(SearchList):
         dump_dir = self.bup_dir + "%s" % (date_dir_str)
 
         # Start the mysql dump process
-        if self.myd_base:
-            self.mydbase = self.myd_base.split()
+        if self.my_dbase:
+            self.mydbase = self.my_dbase.split()
             mydbase_len = len(self.mydbase)
+            #if weewx.debug >= 2 or self.sql_debug >= 2 :
             if weewx.debug >= 2 or self.sql_debug >= 2 :
-                loginf("%s DEBUG: databases, mysql %s named %s" % (
+                logdbg("%s DEBUG: databases, mysql %s named %s" % (
                     skin_name, mydbase_len, self.mydbase))
             if not os.path.exists(mydump_dir):
                 try:
                     os.makedirs(mydump_dir)
                 except OSError,e:
-                    loginf("%s: ERR  %s" % (skin_name, e))
+                    logerr("%s: ERR  %s" % (skin_name, e))
                     return
             if weewx.debug >= 2 or self.sql_debug >= 2:
-               loginf("%s DEBUG: directory for mysql backup files %s" % (
+               logdbg("%s DEBUG: directory for mysql backup files %s" % (
                    skin_name ,mydump_dir))
 
             for step in range(mydbase_len):
                 t5 = time.time() # this loops start time
-                myd_base = self.mydbase[step]
+                my_dbase = self.mydbase[step]
                 # Because we use the  "--where..." clause, we run into trouble
                 # when dumping all tables so we use "--ignore..."  to prevent
                 # an incomplete dump. This is because there is no dateTime in
@@ -374,22 +392,25 @@ class SqlBackup(SearchList):
                 # And thankfully, this is silently ignored if there is no table
                 # of this name; for databases such as mesoraw and sqlite3
                 if len(self.table) < 1:
-                    self.ignore = "--ignore-table=%s.archive_day__metadata" % myd_base
-                    loginf("%s DEBUG: ALL tables specified,including option %s" % (
+                    self.ignore = "--ignore-table=%s.archive_day__metadata" % my_dbase
+                    logdbg("%s DEBUG: ALL tables specified,including option %s" % (
                            skin_name, self.ignore))
                 else:
                     self.ignore = ""
                 if weewx.debug >= 2 or self.sql_debug >= 2:
-                    loginf("%s DEBUG:  mysql database is %s" % (
-                           skin_name, myd_base))
+                    logdbg("%s DEBUG: processing mysql database, %s" % (
+                           skin_name, my_dbase))
                 mydump_file = mydump_dir + "/%s-host.%s-%s-%s.gz"  % (
-                    myd_base, this_host, file_stamp, self.t_label)
+                    my_dbase, this_host, file_stamp, self.t_label)
+                if weewx.debug >= 2 or self.sql_debug >= 2:
+                    logdbg("%s DEBUG: dump_file for mysql backup files %s" % (
+                        skin_name, mydump_file))
                 #cmd = "mysqldump -u%s -p%s -h%s -q  %s %s -w\"dateTime>%s\"
                 #       "%s -R --triggers --single-transaction --skip-opt"
                 # We pass a '>' and this requires shell=True
                 cmd = ("mysqldump -u%s -p%s -h%s -q  %s %s -w\"dateTime>%s\""
                        "%s --single-transaction --skip-opt" %(
-                       self.user, self.passwd, self.host, myd_base,
+                       self.user, self.passwd, self.host, my_dbase,
                        self.table, past_time, self.ignore))
                 dumpcmd = subprocess.Popen(cmd, stdout=subprocess.PIPE,
                                       stderr=subprocess.PIPE, shell=True)
@@ -411,7 +432,7 @@ class SqlBackup(SearchList):
                 else:
                    log_cmd = cmd
                 if weewx.debug >= 2 or self.sql_debug >= 2:
-                    loginf("%s DEBUG: %.2f secs to run %s" % (
+                    logdbg("%s DEBUG: %.2f secs to run %s" % (
                             skin_name, (t6-t5), log_cmd))
 
                 if self.gen_report:
@@ -421,7 +442,7 @@ class SqlBackup(SearchList):
                         log_cmd = ("%s \n\n %s \n" % (log_cmd, cmd_err))
                         cmd_err = ''
                     self.report(self.inc_dir, carry_index, log_cmd,
-                         mydump_file, myd_base, line_count, sql_name, start_loop)
+                         mydump_file, my_dbase, line_count, sql_name, start_loop)
                     carry_index = link_index
                     start_loop = strt_loop
 
@@ -430,16 +451,16 @@ class SqlBackup(SearchList):
             self.dbase = self.sq_dbase.split()
             dbase_len = len(self.dbase)
             if weewx.debug >= 2 or self.sql_debug >= 2:
-                loginf("%s DEBUG: databases, sqlite %s named %s" %
+                logdbg("%s DEBUG: databases, sqlite %s named %s" %
                     (skin_name, dbase_len, self.dbase))
             if not os.path.exists(dump_dir):
                 try:
                     os.makedirs(dump_dir)
                 except OSError,e:
-                    loginf("%s: ERR  %s" % (skin_name, e))
+                    logerr("%s: ERR  %s" % (skin_name, e))
                     return
             if weewx.debug >= 2 or self.sql_debug >= 2:
-               loginf("%s DEBUG: directory for sqlite backup files %s" % (
+               logdbg("%s DEBUG: directory for sqlite backup files %s" % (
                    skin_name, dump_dir))
 
             for step in range(dbase_len):
@@ -447,7 +468,7 @@ class SqlBackup(SearchList):
                 d_base = self.dbase[step]
 
                 # one-shot pass to get a header file - used for table reconstruction
-		# for partial dumps, could be useful for full?
+                # for partial dumps, could be useful for full?
                 schema_file = dump_dir + "/%s-host.%s-schema.sql" % (
                                    d_base, this_host )
                 if not os.path.isfile(schema_file):
@@ -469,10 +490,10 @@ class SqlBackup(SearchList):
                    f.close()
 
                 if weewx.debug >= 2 or self.sql_debug >= 2:
-                    loginf("%s DEBUG:  sql database is %s" % (skin_name, d_base))
+                    logdbg("%s DEBUG: processing sqlite database, %s" % (skin_name, d_base))
                 #dump_file = dump_dir + "/%s-host.%s-%s-%s.gz"  % (
                 #               d_base, this_host, file_stamp, self.t_label)
-                #loginf("%s DEBUG           : dump_file for sqlite backup files %s" % (
+                #logdbg("%s DEBUG           : dump_file for sqlite backup files %s" % (
                 #   skin_name, dump_dir))
                 # We pass a '|' and this also requires shell=True
                 #cmd = "echo '.dump %s' | sqlite3 /var/lib/weewx/%s" % (
@@ -486,18 +507,18 @@ class SqlBackup(SearchList):
                     dump_file = dump_dir + "/%s-host.%s-%s-%s.gz"  % (
                                    d_base, this_host, file_stamp, self.t_label)
                     if weewx.debug >= 2 or self.sql_debug >= 2:
-                        loginf("%s DEBUG           : dump_file for sqlite backup files %s" % (
-                            skin_name, dump_dir))
+                        logdbg("%s DEBUG: dump_file for sqlite backup files %s" % (
+                            skin_name, dump_file))
                     cmd = ("sqlite3 %s/%s '.mode \"insert\" \"%s\"', "
                            " 'SELECT * from %s where dateTime > %s;'" % (
                              self.sq_root, d_base, self.sqtable, self.sqtable,
                              past_time))
                 else:
                     dump_file = dump_dir + "/%s-host.%s-%s-full.gz"  % (
-                                   d_base, this_host, file_stamp, self.t_label)
+                                   d_base, this_host, self.t_label)
                     if weewx.debug >= 2 or self.sql_debug >= 2:
-                        loginf("%s DEBUG           : dump_file for sqlite backup files %s" % (
-                            skin_name, dump_dir))
+                        logdbg("%s DEBUG: dump_file for sqlite backup files %s" % (
+                            skin_name, dump_file))
                     cmd = "echo '.dump %s' | sqlite3 %s/%s" % (
                              self.table, self.sq_root, d_base)
 
@@ -514,7 +535,7 @@ class SqlBackup(SearchList):
                 t8 = time.time() # this loops start time
 
                 if weewx.debug >= 2 or self.sql_debug >= 2:
-                    loginf("%s DEBUG: %.2f secs to run %s" % (
+                    logdbg("%s DEBUG: %.2f secs to run %s" % (
                             skin_name, (t8-t7), cmd))
 
                 if self.gen_report:
@@ -638,10 +659,18 @@ class SqlBackup(SearchList):
             empty.close()
 
         # and then the whole process's finishing time, which will only appear
-        # in the system logs
+        # in the system logs (not the html report, that's done and dusted)
         t2= time.time()
         loginf("%s: Total time used in backups "
                       "and report output: %.2f seconds" % (skin_name, (t2-t1)))
+
+        # Sorry Squire! Just cleaning up any mess we made. As we were...
+        logdbg("%s DEBUG: Resetting weewx.debug logging back to %s mode" % (
+                   skin_name, weewx.debug))
+        if weewx.debug:
+            syslog.setlogmask(syslog.LOG_UPTO(syslog.LOG_DEBUG))
+        else:
+            syslog.setlogmask(syslog.LOG_UPTO(syslog.LOG_INFO))
 
 
     def report(self, inc_dir, carry_index, log_cmd, dump_file, data_base,
@@ -672,7 +701,7 @@ class SqlBackup(SearchList):
                 try:
                     os.makedirs(inc_dir)
                 except OSError,e:
-                    loginf("%s: ERR  %s" % (skin_name, e))
+                    logerr("%s: ERR  %s" % (skin_name, e))
                     return
 
             inc = open(inc_file, 'w')
@@ -704,7 +733,7 @@ class SqlBackup(SearchList):
 
             if weewx.debug >= 2 or self.sql_debug >= 2 :
                 t4= time.time()
-                loginf("%s DEBUG: Created %s in %.2f secs" % (
+                logdbg("%s DEBUG: Created %s in %.2f secs" % (
                        skin_name, inc_file, t4-t3))
 
             return (link_index, strt_loop)
