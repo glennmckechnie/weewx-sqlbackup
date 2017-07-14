@@ -207,49 +207,78 @@ class SqlBackup(SearchList):
         skin_name =  self.generator.skin_dict['skin']
         self.skin_name = skin_name # for export to the template / html
 
-        self.user = self.generator.skin_dict[skin_name].get('sql_user')
-        if not self.user:
-            self.user = self.generator.config_dict['DatabaseTypes']['MySQL'].get('user')
-        self.passwd = self.generator.skin_dict[skin_name].get('sql_pass')
-        if not self.passwd:
-            self.passwd = self.generator.config_dict['DatabaseTypes']['MySQL'].get('password')
-        self.host = self.generator.skin_dict[skin_name].get('sql_host')
-        if not self.host:
-            self.host = self.generator.config_dict['DatabaseTypes']['MySQL'].get('host')
-
-        self.my_dbase = self.generator.skin_dict[skin_name].get('mysql_database','')
-        self.sq_dbase = self.generator.skin_dict[skin_name].get('sql_database','')
-        if not self.my_dbase and not self.sq_dbase:
-            def_dbase = self.generator.config_dict['DataBindings']['wx_binding'].get('database')
-            if self.sql_debug >= 5 :
-                logdbg("%s 5:1 weewx.conf database is %s" % (skin_name, def_dbase))
-            if def_dbase == 'archive_mysql':
-                self.my_dbase = self.generator.config_dict['Databases'][def_dbase].get('database_name')
-                if self.sql_debug >= 5 :
-                    logdbg("%s 5:2 so weewx.conf mysql database is %s" % (skin_name, self.my_dbase))
-            elif def_dbase == 'archive_sqlite':
-                self.sq_dbase = self.generator.config_dict['Databases'][def_dbase].get('database_name')
-                if self.sql_debug >= 5 :
-                    logdbg("%s 5:3 so weewx.conf sqlite database is %s" % (skin_name, self.sq_dbase))
-        self.table = self.generator.skin_dict[skin_name].get('sql_table','archive')
-        self.sqtable = self.generator.skin_dict[skin_name].get('sqlite_table','archive')
-
-        self.mybup_dir = self.generator.skin_dict[skin_name].get('mysql_bup_dir','/var/backups/mysql')
-        self.bup_dir = self.generator.skin_dict[skin_name].get('sql_bup_dir','/var/backups/sql')
-        self.t_period = self.generator.skin_dict[skin_name].get('sql_period','86400')
-        self.t_label = self.generator.skin_dict[skin_name].get('sql_label','daily')
-        self.dated_dir = to_bool(self.generator.skin_dict[skin_name].get('sql_dated_dir', True))
-        self.gen_report = to_bool(self.generator.skin_dict[skin_name].get('sql_gen_report', True))
-        self.hide_pass = to_bool(self.generator.skin_dict[skin_name].get('hide_password', True))
-        self.part_sql = to_bool(self.generator.skin_dict[skin_name].get('part_sqlite', True))
-        self.inc_dir = self.generator.skin_dict[skin_name].get('inc_dir', '/tmp/sqlbackup')
-        # no skin.conf option
-        self.sq_root = self.generator.config_dict['DatabaseTypes']['SQLite'].get('SQLITE_ROOT')
-
         # local (skin) debug switch "2" or weewx.debug, "4" adds extra to html
         # report page
         # 5 is for release testing only and can safely be ignored by users
-        self.sql_debug = int(self.generator.skin_dict[skin_name].get('sql_debug','0'))
+        try:
+            self.sql_debug = int(self.generator.skin_dict[skin_name].get(
+                'sql_debug','0'))
+        except KeyError, e:
+                logerr("%s: KeyError: Missing skin [section] heading? - %s" % (
+                    skin_name, e))
+                return
+
+        self.user = self.generator.skin_dict[skin_name].get('sql_user')
+        if not self.user:
+            self.user = self.generator.config_dict['DatabaseTypes'] \
+               ['MySQL'].get('user')
+        self.passwd = self.generator.skin_dict[skin_name].get('sql_pass')
+        if not self.passwd:
+            self.passwd = self.generator.config_dict['DatabaseTypes'] \
+            ['MySQL'].get('password')
+        self.host = self.generator.skin_dict[skin_name].get('sql_host')
+        if not self.host:
+            self.host = self.generator.config_dict['DatabaseTypes'] \
+                ['MySQL'].get('host')
+
+        self.my_dbase = self.generator.skin_dict[skin_name].get(
+            'mysql_database','')
+        self.sq_dbase = self.generator.skin_dict[skin_name].get(
+            'sql_database','')
+        if not self.my_dbase and not self.sq_dbase:
+            def_dbase = self.generator.config_dict['DataBindings'] \
+                ['wx_binding'].get('database')
+            if self.sql_debug >= 5 :
+                logdbg("%s 5:1 weewx.conf database is %s" % (
+                   skin_name, def_dbase))
+            if def_dbase == 'archive_mysql':
+                self.my_dbase = self.generator.config_dict['Databases'] \
+                    [def_dbase].get('database_name')
+                if self.sql_debug >= 5 :
+                    logdbg("%s 5:2 so weewx.conf mysql database is %s" % (
+                        skin_name, self.my_dbase))
+            elif def_dbase == 'archive_sqlite':
+                self.sq_dbase = self.generator.config_dict['Databases'] \
+                    [def_dbase].get('database_name')
+                if self.sql_debug >= 5 :
+                    logdbg("%s 5:3 so weewx.conf sqlite database is %s" % (
+                        skin_name, self.sq_dbase))
+        self.table = self.generator.skin_dict[skin_name].get('sql_table',
+            'archive')
+        self.sqtable = self.generator.skin_dict[skin_name].get('sqlite_table',
+            'archive')
+
+        self.mybup_dir = self.generator.skin_dict[skin_name].get(
+            'mysql_bup_dir','/var/backups/mysql')
+        self.bup_dir = self.generator.skin_dict[skin_name].get(
+            'sql_bup_dir','/var/backups/sql')
+        self.t_period = self.generator.skin_dict[skin_name].get(
+            'sql_period','86400')
+        self.t_label = self.generator.skin_dict[skin_name].get(
+            'sql_label','daily')
+        self.dated_dir = to_bool(self.generator.skin_dict[skin_name].get(
+            'sql_dated_dir', True))
+        self.gen_report = to_bool(self.generator.skin_dict[skin_name].get(
+            'sql_gen_report', True))
+        self.hide_pass = to_bool(self.generator.skin_dict[skin_name].get(
+            'hide_password', True))
+        self.part_sql = to_bool(self.generator.skin_dict[skin_name].get(
+            'part_sqlite', True))
+        self.inc_dir = self.generator.skin_dict[skin_name].get(
+            'inc_dir', '/tmp/sqlbackup')
+        # no skin.conf option
+        self.sq_root = self.generator.config_dict['DatabaseTypes'] \
+            ['SQLite'].get('SQLITE_ROOT')
 
         # /usr/share/weewx/weewx/engine.py :850
         if weewx.debug or self.sql_debug:
@@ -260,13 +289,14 @@ class SqlBackup(SearchList):
             syslog.setlogmask(syslog.LOG_UPTO(syslog.LOG_INFO))
 
         if self.sql_debug >= 5 : # sanity check for releases - safely ignored.
-            #logdbg("%s 5: user is  %s" % (skin_name, self.user))
-            logdbg("%s 5: user was Ssssh!" % skin_name)
-            #logdbg("%s 5: passwd is  %s" % (skin_name, self.passwd))
-            logdbg("%s 5: passwd was Ssssh!" % skin_name)
+            if not self.hide_pass:
+                logdbg("%s 5: user is  %s" % (skin_name, self.user))
+                logdbg("%s 5: passwd is  %s" % (skin_name, self.passwd))
             logdbg("%s 5: host is %s" % (skin_name, self.host))
-            logdbg("%s 5: mysql database/s selected: %s" % (skin_name, self.my_dbase))
-            logdbg("%s 5: sqlite database/s selected: %s" % (skin_name, self.sq_dbase))
+            logdbg("%s 5: mysql database/s selected: %s" % (
+                skin_name, self.my_dbase))
+            logdbg("%s 5: sqlite database/s selected: %s" % (
+                skin_name, self.sq_dbase))
             logdbg("%s 5: mysql table is %s" % (skin_name, self.table))
             logdbg("%s 5: sqlite table is %s" % (skin_name, self.sqtable))
             logdbg("%s 5: mysql backup dir is %s" % (skin_name, self.mybup_dir))
@@ -275,7 +305,8 @@ class SqlBackup(SearchList):
             logdbg("%s 5: generate report is %s" % (skin_name, self.gen_report))
             logdbg("%s 5: hide password is %s" % (skin_name, self.hide_pass))
             logdbg("%s 5: sqlite method is %s" % (skin_name, self.part_sql))
-            logdbg("%s 5: using sql_debug level of %s" % (skin_name, self.sql_debug))
+            logdbg("%s 5: using sql_debug level of %s" % (
+                skin_name, self.sql_debug))
 
         carry_index = '<hr><b>Databases :: </b>'
         start_loop = 0
@@ -392,9 +423,10 @@ class SqlBackup(SearchList):
                 # And thankfully, this is silently ignored if there is no table
                 # of this name; for databases such as mesoraw and sqlite3
                 if len(self.table) < 1:
-                    self.ignore = "--ignore-table=%s.archive_day__metadata" % my_dbase
-                    logdbg("%s DEBUG: ALL tables specified,including option %s" % (
-                           skin_name, self.ignore))
+                    self.ignore = ("--ignore-table=%s.archive_day__metadata" %
+                        my_dbase)
+                    logdbg("%s DEBUG: ALL tables specified,including option %s"
+                        % (skin_name, self.ignore))
                 else:
                     self.ignore = ""
                 if weewx.debug >= 2 or self.sql_debug >= 2:
@@ -409,7 +441,7 @@ class SqlBackup(SearchList):
                 #       "%s -R --triggers --single-transaction --skip-opt"
                 # We pass a '>' and this requires shell=True
                 cmd = ("mysqldump -u%s -p%s -h%s -q  %s %s -w\"dateTime>%s\""
-                       "%s --single-transaction --skip-opt" %(
+                       " %s --single-transaction --skip-opt" %(
                        self.user, self.passwd, self.host, my_dbase,
                        self.table, past_time, self.ignore))
                 dumpcmd = subprocess.Popen(cmd, stdout=subprocess.PIPE,
@@ -424,11 +456,9 @@ class SqlBackup(SearchList):
                 t6 = time.time() # this loops finishing  time
 
                 # obfuscate for logs: hide_password = True as default
-                # This will replace ALL occurences of the string - if your
-                # database name is the same, that will be obfuscated too!
                 if self.hide_pass:
-                    log_cmd = cmd.replace(self.user ,"XxXxX" )
-                    log_cmd = log_cmd.replace(self.passwd ,"XxXxX" )
+                    log_cmd = cmd.replace(self.user ,"XxXxX", 1 )
+                    log_cmd = log_cmd.replace(self.passwd ,"XxXxX", 1 )
                 else:
                    log_cmd = cmd
                 if weewx.debug >= 2 or self.sql_debug >= 2:
@@ -514,8 +544,8 @@ class SqlBackup(SearchList):
                              self.sq_root, d_base, self.sqtable, self.sqtable,
                              past_time))
                 else:
-                    dump_file = dump_dir + "/%s-host.%s-%s-full.gz"  % (
-                                   d_base, this_host, self.t_label)
+                    dump_file = dump_dir + "/%s-host.%s-all.gz"  % (
+                                   d_base, this_host)
                     if weewx.debug >= 2 or self.sql_debug >= 2:
                         logdbg("%s DEBUG: dump_file for sqlite backup files %s" % (
                             skin_name, dump_file))
@@ -643,7 +673,7 @@ class SqlBackup(SearchList):
                 tl.write('</pre>\n')
                 tl.close()
 
-        # or else: we're not reporting. state that & nullify .inc's
+        # or else: we're not reporting. State that & nullify .inc's
         else:
             skp = open(self.all_file, 'w')
             skp.write("<p>Report generation is disabled in skin.conf</p>")
@@ -664,7 +694,7 @@ class SqlBackup(SearchList):
         loginf("%s: Total time used in backups "
                       "and report output: %.2f seconds" % (skin_name, (t2-t1)))
 
-        # Sorry Squire! Just cleaning up any mess we made. As we were...
+        # Sorry Squire! Just cleaning up any mess we made. As you were...
         logdbg("%s DEBUG: Resetting weewx.debug logging back to %s mode" % (
                    skin_name, weewx.debug))
         if weewx.debug:
@@ -709,14 +739,24 @@ class SqlBackup(SearchList):
                       '"#Top">Back to top</a>\n<h2>Extract from the %s '
                       'Database dump file: </h2>\n<pre class="gry">%s\n\n\n' % (
                       data_base, data_base, log_cmd))
-            # broken pipe error from wee_reports appears harmless & is due to
-            # head truncating the operation.
             inc.close()
-            my_head = "zcat  %s | head -n%s >> %s" % (
-                       dump_file, line_count, inc_file)
-            os.system(my_head)
+            #my_head = "zcat  %s | head -n%s >> %s" % (
+            #           dump_file, line_count, inc_file)
+            # broken pipe error from wee_reports seems harmless but is annoying
+            # & is due to head truncating the operation. Ah! more at ...
+            # https://blog.nelhage.com/2010/02/a-very-subtle-bug/
+            # switch to subprocess method and ignore it.
+            #os.system(my_head)
+            my_head = "zcat  %s | head -n%s " % (
+                       dump_file, line_count)
+            headcmd = subprocess.Popen(my_head, stdout=subprocess.PIPE,
+                                 stderr=subprocess.PIPE, shell=True)
+            myhead_out, myhead_err = headcmd.communicate()
+            #print "head error is %s" % myhead_err
             inc = open(inc_file, 'a')
-            inc.write("\n[...]\n\n")
+            #inc.write("\n[...]\n\n")
+            all_head =[myhead_out, "\n[...]\n\n"]
+            inc.writelines(all_head)
             inc.close()
             my_tail = "zcat %s | tail -n20 >> %s" % (dump_file, inc_file)
             os.system(my_tail)
