@@ -28,7 +28,9 @@ class SqlBackupInstaller(ExtensionInstaller):
                     'skins/sqlbackup/sqlbackup.css',
                     'skins/sqlbackup/index.html.tmpl',
                     'skins/sqlbackup/sqlbackup.inc',
-                    'skins/sqlbackup/sqlbackupREADME.html'
-                    ])
+                    'skins/sqlbackup/sqlbackupREADME.html']),
+                   ('skins/sqlbackup/font',
+                   ['skins/sqlbackup/font/OpenSans.woff',
+                    'skins/sqlbackup/font/OpenSans.woff2'])
                   ]
         )
