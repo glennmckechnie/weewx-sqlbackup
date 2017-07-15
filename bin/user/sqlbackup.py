@@ -650,24 +650,27 @@ class SqlBackup(SearchList):
                 # loop, in a loop.
                 os.system("grep /var/log/syslog -e '#' -v|grep  -e 'sqlbackup'"
                           "| tail -n50 >> %s"% self.tail_file)
+		# default install finds only 1 database, deal with it only
+                if os.path.exists(mydump_dir):
+                    tl = open(self.tail_file, 'a')
+                    tl.write('</pre><hr>\n<a id="mysql"></a><a href="#Top">'
+                             'Back to top</a>'
+                             '<h2>MySQL files: </h2>&nbsp;&nbsp;&nbsp;&nbsp;\n'
+                             '<pre class="gry">\n%s\n\n' % mydump_dir)
+                    tl.close()
+                    os.system("ls -gtr %s | tail -n10 >> %s" % (
+                               mydump_dir, self.tail_file))
 
-                tl = open(self.tail_file, 'a')
-                tl.write('</pre><hr>\n<a id="mysql"></a><a href="#Top">'
-                         'Back to top</a>'
-                         '<h2>MySQL files: </h2>&nbsp;&nbsp;&nbsp;&nbsp;\n'
-                         '<pre class="gry">\n%s\n\n' % mydump_dir)
-                tl.close()
-                os.system("ls -gtr %s | tail -n10 >> %s" % (
-                           mydump_dir, self.tail_file))
-
-                tl = open(self.tail_file, 'a')
-                tl.write('</pre><hr>'
-                         '\n<a id="sql"></a><a href="#Top">Back to top</a>'
-                         '<h2>sqlite files: </h2>&nbsp;&nbsp;&nbsp;&nbsp;\n'
-                         '<pre class="gry">\n%s\n\n' % dump_dir)
-                tl.close()
-                os.system("ls -gtr %s | tail -n10 >> %s" % (
-                          dump_dir,self.tail_file))
+		# default install finds only 1 database, deal with it only
+                if os.path.exists(dump_dir):
+                    tl = open(self.tail_file, 'a')
+                    tl.write('</pre><hr>'
+                             '\n<a id="sql"></a><a href="#Top">Back to top</a>'
+                             '<h2>sqlite files: </h2>&nbsp;&nbsp;&nbsp;&nbsp;\n'
+                             '<pre class="gry">\n%s\n\n' % dump_dir)
+                    tl.close()
+                    os.system("ls -gtr %s | tail -n10 >> %s" % (
+                              dump_dir,self.tail_file))
 
                 tl = open(self.tail_file, 'a')
                 tl.write('</pre>\n')
