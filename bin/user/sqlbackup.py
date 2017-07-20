@@ -26,6 +26,8 @@ from weewx.wxengine import StdService
 from weewx.cheetahgenerator import SearchList
 from weeutil.weeutil import to_bool
 
+sql_version = "0.3"
+
 def logmsg(level, msg):
     syslog.syslog(level, '%s' % msg)
 
@@ -55,7 +57,7 @@ class SqlBackup(SearchList):
     At restore time we'll then need to select some or all of the dump files,
     and stitch them together as appropriate.
 
-    If it's an sqlite dtabase, it will dump it (them) all, or now the default
+    If it's an sqlite database, it will dump it (them) all, or now the default
     is to do as for mysql - a partial dump
 
     This skin was created to backup a mysql database that runs purely in
@@ -119,6 +121,7 @@ class SqlBackup(SearchList):
     #
     # date +"%s"
     # returns  current epoch time
+
     """
 
     def __init__(self, generator):
@@ -214,9 +217,12 @@ class SqlBackup(SearchList):
             self.sql_debug = int(self.generator.skin_dict[skin_name].get(
                 'sql_debug','0'))
         except KeyError, e:
+                # err with duplicate skin, if skin.conf [section] isn't renamed
                 logerr("%s: KeyError: Missing skin [section] heading? - %s" % (
                     skin_name, e))
                 return
+        if weewx.debug >= 1  or self.sql_debug >= 1 :
+            loginf('%s: version is %s' % (skin_name, sql_version))
 
         self.user = self.generator.skin_dict[skin_name].get('sql_user')
         if not self.user:
@@ -650,7 +656,7 @@ class SqlBackup(SearchList):
                 # loop, in a loop.
                 os.system("grep /var/log/syslog -e '#' -v|grep  -e 'sqlbackup'"
                           "| tail -n50 >> %s"% self.tail_file)
-		# default install finds only 1 database, deal with it only
+                # default install finds only 1 database, deal with it only
                 if os.path.exists(mydump_dir):
                     tl = open(self.tail_file, 'a')
                     tl.write('</pre><hr>\n<a id="mysql"></a><a href="#Top">'
@@ -661,7 +667,7 @@ class SqlBackup(SearchList):
                     os.system("ls -gtr %s | tail -n10 >> %s" % (
                                mydump_dir, self.tail_file))
 
-		# default install finds only 1 database, deal with it only
+                # default install finds only 1 database, deal with it only
                 if os.path.exists(dump_dir):
                     tl = open(self.tail_file, 'a')
                     tl.write('</pre><hr>'
