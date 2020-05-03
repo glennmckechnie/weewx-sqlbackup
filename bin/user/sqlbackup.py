@@ -10,8 +10,8 @@
 #
 
 import os
-import errno
-import sys
+#import errno
+#import sys
 import shutil
 import gzip
 import subprocess
@@ -22,28 +22,48 @@ import datetime
 import weewx.engine
 import weewx.manager
 import weewx.units
-from weewx.wxengine import StdService
+#from weewx.wxengine import StdService
 from weewx.cheetahgenerator import SearchList
 from weeutil.weeutil import to_bool
 
 sql_version = "0.3"
 
-def logmsg(level, msg):
-    syslog.syslog(level, '%s' % msg)
+try:
+    # Test for new-style weewx logging by trying to import weeutil.logger
+    import weeutil.logger
+    import logging
+    log = logging.getLogger(__name__)
 
-def loginf(msg):
-    logmsg(syslog.LOG_INFO, msg)
+    def logdbg(msg):
+        log.debug(msg)
 
-def logerr(msg):
-    logmsg(syslog.LOG_ERR, msg)
+    def loginf(msg):
+        log.info(msg)
 
-def logdbg(msg):
-    logmsg(syslog.LOG_DEBUG, msg)
+    def logerr(msg):
+        log.error(msg)
 
-def tlwrite(txt): # unused
-    tl = open(self.tail_file, 'w')
-    tl.write(txt)
-    tl.close()
+except ImportError:
+    # Old-style weewx logging
+    import syslog
+
+    def logmsg(level, msg):
+        # Replace '__name__' with something to identify your application.
+        syslog.syslog(level, 'sqlbackup: %s:' % msg)
+
+    def logdbg(msg):
+        logmsg(syslog.LOG_DEBUG, msg)
+
+    def loginf(msg):
+        logmsg(syslog.LOG_INFO, msg)
+
+    def logerr(msg):
+        logmsg(syslog.LOG_ERR, msg)
+
+#def tlwrite(txt): # unused
+#    tl = open(tail_file, 'w')
+#    tl.write(txt)
+#    tl.close()
 
 class SqlBackup(SearchList):
     """ Notes and WARNINGS
@@ -135,8 +155,8 @@ class SqlBackup(SearchList):
         report run. This makes it very easy to manipulate - databases, timings
         etc. while setting up the skin. No need to restart weewx.
 
-        report_timing: This is an essential. See the weewx documentation for the
-        full description on this addition. There are many options
+        report_timing: This is an essential. See the weewx documentation for
+        the full description on this addition. There are many options
         eg:- '2 * * * 1' ,  @daily, @weekly, @monthly, etc
 
 
@@ -150,8 +170,8 @@ class SqlBackup(SearchList):
         self.mybup_dir: mysql backup directory; defaults to '/var/backups/mysql'
         self.bup_dir: sqlite backup directory; defaults to '/var/backups/sql'
         sql_dated_dir: optional string to append to self.xxx_dir. It will be of
-         the form 20171231 The default is true. Useful if backups are taken often
-         Possibly not so useful if only occasional.
+         the form 20171231 The default is true. Useful if backups are taken
+         often, possibly not so useful if only occasional.
         sql_gen_report: optional html report, helps with quick status check and
          is the only way to catch any errors - std output is directed to the
          bup_file so thats where they are found. The report shows enough to
@@ -177,12 +197,12 @@ class SqlBackup(SearchList):
         overwritten via skin.conf
         sql_host: mysql database location; defaults to weewx.conf value. Can be
          overwritten via skin.conf.
-        mysql_database: mysql database name; defaults to 'None' (see next entry)
+        mysql_database: mysql database name; defaults to 'None'(see next entry)
         sql_database: sqlite database name; defaults to'None'. If both these
-         values are None in skin.conf, it will default to the weewx.conf default
-         database. Supplying a value other than none in skin.conf will override
-         that behaviour. This is useful to backup multiple databases using a
-         space seperated list.
+         values are None in skin.conf, it will default to the weewx.conf
+         default database. Supplying a value other than none in skin.conf will
+         override that behaviour. This is useful to backup multiple databases
+         using a space seperated list.
         sql_table: mysql / sqlite tables to dump; This defaults to 'archive'.
          Works on full sqlite .dump only.   Use '' to specify 'all' tables.
         sqlite_table: sqlite tables to dump when doing a partial dump; This
@@ -196,7 +216,7 @@ class SqlBackup(SearchList):
          release) They aren't persistent so /tmp is a good spot.
         """
 
-        t1 = time.time() # this process's start time
+        t1 = time.time()  # this process's start time
 
         # This probably abuses the weewx naming practice but it enables re-use
         # of the skin (seperate reports) with different values:
@@ -204,24 +224,24 @@ class SqlBackup(SearchList):
         # stanzas of their own.
         # If multiple skins are configured then it's probably best not to use
         # the @daily etc shortcuts but rather use the '5 * 7 * *' style as the
-        # minutes can then be adjusted to prevent clashes were they to coincide.
+        # minutes can then be adjusted to prevent clashes were they to coincide
         # skin_name also allows log messages to  reflect this skin re-use
         global skin_name
-        skin_name =  self.generator.skin_dict['skin']
-        self.skin_name = skin_name # for export to the template / html
+        skin_name = self.generator.skin_dict['skin']
+        self.skin_name = skin_name  # for export to the template / html
 
         # local (skin) debug switch "2" or weewx.debug, "4" adds extra to html
         # report page
         # 5 is for release testing only and can safely be ignored by users
         try:
             self.sql_debug = int(self.generator.skin_dict[skin_name].get(
-                'sql_debug','0'))
-        except KeyError, e:
-                # err with duplicate skin, if skin.conf [section] isn't renamed
-                logerr("%s: KeyError: Missing skin [section] heading? - %s" % (
+                'sql_debug', '0'))
+        except KeyError as e:
+            # err with duplicate skin, if skin.conf [section] isn't renamed
+            logerr("%s: KeyError: Missing skin [section] heading? - %s" % (
                     skin_name, e))
-                return
-        if weewx.debug >= 1  or self.sql_debug >= 1 :
+            return
+        if weewx.debug >= 1 or self.sql_debug >= 1 :
             loginf('%s: version is %s' % (skin_name, sql_version))
 
         self.user = self.generator.skin_dict[skin_name].get('sql_user')
@@ -340,7 +360,7 @@ class SqlBackup(SearchList):
         if not os.path.exists(self.inc_dir):
             try:
                 os.makedirs(self.inc_dir)
-            except OSError,e:
+            except OSError as e:
                 logerr("%s: ERR  %s" % (skin_name, e))
                 return
 
@@ -354,7 +374,7 @@ class SqlBackup(SearchList):
         # test if at least one .inc file can be created & bail out if it fails
         try:
             chck = open(self.head_file, 'w+')
-        except IOError, e:
+        except IOError as e:
             logerr("%s: ERR  %s" % (skin_name, e))
             return
         chck.close()
@@ -372,7 +392,7 @@ class SqlBackup(SearchList):
         # continued
         try:
             strt = open(self.links_file, 'w')
-        except IOError, e:
+        except IOError as e:
             logerr("%s: ERR  %s" % (skin_name, e))
             return
         strt.write(carry_index)
@@ -412,7 +432,7 @@ class SqlBackup(SearchList):
             if not os.path.exists(mydump_dir):
                 try:
                     os.makedirs(mydump_dir)
-                except OSError,e:
+                except OSError as e:
                     logerr("%s: ERR  %s" % (skin_name, e))
                     return
             if weewx.debug >= 2 or self.sql_debug >= 2:
@@ -492,7 +512,7 @@ class SqlBackup(SearchList):
             if not os.path.exists(dump_dir):
                 try:
                     os.makedirs(dump_dir)
-                except OSError,e:
+                except OSError as e:
                     logerr("%s: ERR  %s" % (skin_name, e))
                     return
             if weewx.debug >= 2 or self.sql_debug >= 2:
@@ -539,7 +559,9 @@ class SqlBackup(SearchList):
                 #cmd = ("sqlite3 -insert /var/lib/weewx/%s "
                 #       " 'SELECT * from archive where dateTime > %s;'" % (
                 #         d_base, past_time))
+                #loginf("self.part.sql is ?? : %s" % self.part_sql)
                 if self.part_sql:
+                    #loginf("if self.part.sql says True or : %s" % self.part_sql)
                     dump_file = dump_dir + "/%s-host.%s-%s-%s.gz"  % (
                                    d_base, this_host, file_stamp, self.t_label)
                     if weewx.debug >= 2 or self.sql_debug >= 2:
@@ -739,7 +761,7 @@ class SqlBackup(SearchList):
             if not os.path.exists(inc_dir):
                 try:
                     os.makedirs(inc_dir)
-                except OSError,e:
+                except OSError as e:
                     logerr("%s: ERR  %s" % (skin_name, e))
                     return
 
@@ -761,7 +783,10 @@ class SqlBackup(SearchList):
             headcmd = subprocess.Popen(my_head, stdout=subprocess.PIPE,
                                  stderr=subprocess.PIPE, shell=True)
             myhead_out, myhead_err = headcmd.communicate()
-            #print "head error is %s" % myhead_err
+            myhead_out = myhead_out.decode('utf-8')
+            myhead_err = myhead_err.decode('utf-8')
+            #logdbg("head error is %s" % myhead_err)
+            #logdbg("head out is %s" % myhead_out)
             inc = open(inc_file, 'a')
             #inc.write("\n[...]\n\n")
             all_head =[myhead_out, "\n[...]\n\n"]
