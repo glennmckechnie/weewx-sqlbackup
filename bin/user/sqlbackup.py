@@ -26,7 +26,7 @@ import weewx.units
 from weewx.cheetahgenerator import SearchList
 from weeutil.weeutil import to_bool
 
-sql_version = "0.3"
+sql_version = "0.4"
 
 try:
     # Test for new-style weewx logging by trying to import weeutil.logger
@@ -473,6 +473,7 @@ class SqlBackup(SearchList):
                 dumpcmd = subprocess.Popen(cmd, stdout=subprocess.PIPE,
                                       stderr=subprocess.PIPE, shell=True)
                 dump_output, dump_err = dumpcmd.communicate()
+                dump_err = dump_err.decode('utf-8')
                 if dump_err:
                     cmd_err = ("%s  ERROR : %s)" % (skin_name, dump_err))
                     logerr(cmd_err)
@@ -537,7 +538,8 @@ class SqlBackup(SearchList):
                    headcmd = subprocess.Popen(cmd, stdout=subprocess.PIPE,
                                      stderr=subprocess.PIPE, shell=True)
                    hed_output, hed_err = headcmd.communicate()
-                   #dumpoutput = dump_output.encode("utf-8").strip()
+                   hed_output = hed_output.decode('utf-8')
+                   hed_err = hed_err.decode('utf-8')
                    if hed_err:
                        cmd_err = ("%s  ERROR : %s)" % (skin_name, hed_err))
                        logerr(cmd_err)
@@ -583,6 +585,8 @@ class SqlBackup(SearchList):
                 dumpcmd = subprocess.Popen(cmd, stdout=subprocess.PIPE,
                                       stderr=subprocess.PIPE, shell=True)
                 dump_output, dump_err = dumpcmd.communicate()
+                dump_output = dump_output.decode('utf-8')
+                dump_err = dump_err.decode('utf-8')
                 #dumpoutput = dump_output.encode("utf-8").strip()
                 if dump_err:
                     cmd_err = ("%s  ERROR : %s)" % (skin_name, dump_err))
@@ -785,10 +789,7 @@ class SqlBackup(SearchList):
             myhead_out, myhead_err = headcmd.communicate()
             myhead_out = myhead_out.decode('utf-8')
             myhead_err = myhead_err.decode('utf-8')
-            #logdbg("head error is %s" % myhead_err)
-            #logdbg("head out is %s" % myhead_out)
             inc = open(inc_file, 'a')
-            #inc.write("\n[...]\n\n")
             all_head =[myhead_out, "\n[...]\n\n"]
             inc.writelines(all_head)
             inc.close()
