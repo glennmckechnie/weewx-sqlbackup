@@ -1,17 +1,14 @@
+# Copyright (c) 2017-2020 Glenn McKechnie <glenn.mckechnie@gmail.com>
+# Credit to Tom Keffer <tkeffer@gmail.com>, Matthew Wall and the core
+#        weewx team, all from whom I've borrowed heavily.
+# Mistakes are mine, corrections and or improvements welcomed
+#      https://github.com/glennmckechnie/weewx-sqlbackup
 #
-#    Copyright (c) 2017 Glenn McKechnie glenn.mckechnie@gmail.com>
-#    Credit to Tom Keffer <tkeffer@gmail.com>, Matthew Wall and the core
-#    weewx team, all from whom I've borrowed heavily.
-#    Mistakes are mine, corrections and or improvements welcomed
-#       https://github.com/glennmckechnie/weewx-sqlbackup
-#
-#    See the file LICENSE.txt for your full rights.
+# See the file LICENSE.txt for your full rights.
 #
 #
 
 import os
-#import errno
-#import sys
 import shutil
 import gzip
 import subprocess
@@ -22,11 +19,10 @@ import datetime
 import weewx.engine
 import weewx.manager
 import weewx.units
-#from weewx.wxengine import StdService
 from weewx.cheetahgenerator import SearchList
 from weeutil.weeutil import to_bool
 
-sql_version = "0.4"
+sql_version = "0.5"
 
 try:
     # Test for new-style weewx logging by trying to import weeutil.logger
@@ -48,7 +44,6 @@ except ImportError:
     import syslog
 
     def logmsg(level, msg):
-        # Replace '__name__' with something to identify your application.
         syslog.syslog(level, 'sqlbackup: %s:' % msg)
 
     def logdbg(msg):
@@ -60,10 +55,18 @@ except ImportError:
     def logerr(msg):
         logmsg(syslog.LOG_ERR, msg)
 
-#def tlwrite(txt): # unused
-#    tl = open(tail_file, 'w')
-#    tl.write(txt)
-#    tl.close()
+"""
+add to weewx.conf if debug output is required
+sql_debug = 5 will also need to be set in skin.conf
+[Logging]
+    [[loggers]]
+        [[[user.sqlbackup]]]
+            level = DEBUG
+            handlers = syslog,
+            propagate = 0
+
+"""
+
 
 class SqlBackup(SearchList):
     """ Notes and WARNINGS
@@ -106,7 +109,7 @@ class SqlBackup(SearchList):
     Reasons for doing it this way (instead of seperate scripts and cron) are
     that it should integrate easily with the weewx proces. This report runs
     after database writes have been done (providing you don't ask too much of
-    it), and keeping it under the weewx umbrella fits the "one stop shop" model.
+    it), and keeping it under the weewx umbrella fits the "one stop shop" model
     If we don't interfere too much we should slip under the radar.
     Keep it small and sensible and that should all remain true.
 
@@ -141,7 +144,6 @@ class SqlBackup(SearchList):
     #
     # date +"%s"
     # returns  current epoch time
-
     """
 
     def __init__(self, generator):
@@ -167,8 +169,8 @@ class SqlBackup(SearchList):
          seconds (24hours)
         sql_label: mysql; text label to match above. This has meaning
          to you.
-        self.mybup_dir: mysql backup directory; defaults to '/var/backups/mysql'
-        self.bup_dir: sqlite backup directory; defaults to '/var/backups/sql'
+        self.mybup_dir: mysql backup directory: default is '/var/backups/mysql'
+        self.bup_dir: sqlite backup directory: default is '/var/backups/sql'
         sql_dated_dir: optional string to append to self.xxx_dir. It will be of
          the form 20171231 The default is true. Useful if backups are taken
          often, possibly not so useful if only occasional.
@@ -238,60 +240,57 @@ class SqlBackup(SearchList):
                 'sql_debug', '0'))
         except KeyError as e:
             # err with duplicate skin, if skin.conf [section] isn't renamed
-            logerr("%s: KeyError: Missing skin [section] heading? - %s" % (
-                    skin_name, e))
+            logerr("KeyError: Missing skin [section] heading? - %s" % e)
             return
-        if weewx.debug >= 1 or self.sql_debug >= 1 :
-            loginf('%s: version is %s' % (skin_name, sql_version))
+        if weewx.debug >= 1 or self.sql_debug >= 1:
+            loginf('version is %s' % sql_version)
 
         self.user = self.generator.skin_dict[skin_name].get('sql_user')
         if not self.user:
             self.user = self.generator.config_dict['DatabaseTypes'] \
-               ['MySQL'].get('user')
+                ['MySQL'].get('user')
         self.passwd = self.generator.skin_dict[skin_name].get('sql_pass')
         if not self.passwd:
             self.passwd = self.generator.config_dict['DatabaseTypes'] \
-            ['MySQL'].get('password')
+                ['MySQL'].get('password')
         self.host = self.generator.skin_dict[skin_name].get('sql_host')
         if not self.host:
             self.host = self.generator.config_dict['DatabaseTypes'] \
                 ['MySQL'].get('host')
 
         self.my_dbase = self.generator.skin_dict[skin_name].get(
-            'mysql_database','')
+            'mysql_database', '')
         self.sq_dbase = self.generator.skin_dict[skin_name].get(
-            'sql_database','')
+            'sql_database', '')
         if not self.my_dbase and not self.sq_dbase:
             def_dbase = self.generator.config_dict['DataBindings'] \
                 ['wx_binding'].get('database')
             if self.sql_debug >= 5 :
-                logdbg("%s 5:1 weewx.conf database is %s" % (
-                   skin_name, def_dbase))
+                logdbg(" 5:1 weewx.conf database is %s" % def_dbase)
             if def_dbase == 'archive_mysql':
                 self.my_dbase = self.generator.config_dict['Databases'] \
                     [def_dbase].get('database_name')
                 if self.sql_debug >= 5 :
-                    logdbg("%s 5:2 so weewx.conf mysql database is %s" % (
-                        skin_name, self.my_dbase))
+                    logdbg("5:2 weewx.conf mysql dbase is %s" % self.my_dbase)
             elif def_dbase == 'archive_sqlite':
                 self.sq_dbase = self.generator.config_dict['Databases'] \
                     [def_dbase].get('database_name')
-                if self.sql_debug >= 5 :
-                    logdbg("%s 5:3 so weewx.conf sqlite database is %s" % (
-                        skin_name, self.sq_dbase))
+                if self.sql_debug >= 5:
+                    logdbg("5:3 so weewx.conf sqlite database is %s" %
+                           self.sq_dbase)
         self.table = self.generator.skin_dict[skin_name].get('sql_table',
-            'archive')
+                                                             'archive')
         self.sqtable = self.generator.skin_dict[skin_name].get('sqlite_table',
-            'archive')
+                                                               'archive')
 
         self.mybup_dir = self.generator.skin_dict[skin_name].get(
-            'mysql_bup_dir','/var/backups/mysql')
+            'mysql_bup_dir', '/var/backups/mysql')
         self.bup_dir = self.generator.skin_dict[skin_name].get(
-            'sql_bup_dir','/var/backups/sql')
+            'sql_bup_dir', '/var/backups/sql')
         self.t_period = self.generator.skin_dict[skin_name].get(
-            'sql_period','86400')
+            'sql_period', '86400')
         self.t_label = self.generator.skin_dict[skin_name].get(
-            'sql_label','daily')
+            'sql_label', 'daily')
         self.dated_dir = to_bool(self.generator.skin_dict[skin_name].get(
             'sql_dated_dir', True))
         self.gen_report = to_bool(self.generator.skin_dict[skin_name].get(
@@ -302,37 +301,29 @@ class SqlBackup(SearchList):
             'part_sqlite', True))
         self.inc_dir = self.generator.skin_dict[skin_name].get(
             'inc_dir', '/tmp/sqlbackup')
+        self.log_dir = self.generator.skin_dict[skin_name].get(
+            'log_dir', '/var/log/syslog')
         # no skin.conf option
         self.sq_root = self.generator.config_dict['DatabaseTypes'] \
             ['SQLite'].get('SQLITE_ROOT')
 
-        # /usr/share/weewx/weewx/engine.py :850
-        if weewx.debug or self.sql_debug:
-            syslog.setlogmask(syslog.LOG_UPTO(syslog.LOG_DEBUG))
-            logdbg("%s DEBUG: using sql_debug of %s with weewx.debug of %s" % (
-                      skin_name, self.sql_debug, weewx.debug))
-        else:
-            syslog.setlogmask(syslog.LOG_UPTO(syslog.LOG_INFO))
-
-        if self.sql_debug >= 5 : # sanity check for releases - safely ignored.
+        if self.sql_debug >= 5:  # sanity check for releases - safely ignored.
             if not self.hide_pass:
-                logdbg("%s 5: user is  %s" % (skin_name, self.user))
-                logdbg("%s 5: passwd is  %s" % (skin_name, self.passwd))
-            logdbg("%s 5: host is %s" % (skin_name, self.host))
-            logdbg("%s 5: mysql database/s selected: %s" % (
-                skin_name, self.my_dbase))
-            logdbg("%s 5: sqlite database/s selected: %s" % (
-                skin_name, self.sq_dbase))
-            logdbg("%s 5: mysql table is %s" % (skin_name, self.table))
-            logdbg("%s 5: sqlite table is %s" % (skin_name, self.sqtable))
-            logdbg("%s 5: mysql backup dir is %s" % (skin_name, self.mybup_dir))
-            logdbg("%s 5: sqlite backup dir is %s" % (skin_name, self.bup_dir))
-            logdbg("%s 5: dated directory is %s" % (skin_name, self.dated_dir))
-            logdbg("%s 5: generate report is %s" % (skin_name, self.gen_report))
-            logdbg("%s 5: hide password is %s" % (skin_name, self.hide_pass))
-            logdbg("%s 5: sqlite method is %s" % (skin_name, self.part_sql))
-            logdbg("%s 5: using sql_debug level of %s" % (
-                skin_name, self.sql_debug))
+                logdbg("5: user is  %s" % self.user)
+                logdbg("5: passwd is  %s" % self.passwd)
+            logdbg("5: host is %s" % self.host)
+            logdbg("5: mysql database/s selected: %s" % self.my_dbase)
+            logdbg("5: sqlite database/s selected: %s" % self.sq_dbase)
+            logdbg("5: mysql table is %s" % self.table)
+            logdbg("5: sqlite table is %s" % self.sqtable)
+            logdbg("5: mysql backup dir is %s" % self.mybup_dir)
+            logdbg("5: sqlite backup dir is %s" % self.bup_dir)
+            logdbg("5: dated directory is %s" % self.dated_dir)
+            logdbg("5: generate report is %s" % self.gen_report)
+            logdbg("5: hide password is %s" % self.hide_pass)
+            logdbg("5: sqlite method is %s" % self.part_sql)
+            logdbg("5: using sql_debug level of %s" % self.sql_debug)
+            logdbg("5: using log_dir of %s" % self.log_dir)
 
         carry_index = '<hr><b>Databases :: </b>'
         start_loop = 0
@@ -355,13 +346,13 @@ class SqlBackup(SearchList):
             try:
                 shutil.rmtree(self.inc_dir)
             except OSError:
-                logerr("%s: ERR  %s" % (skin_name, e))
+                logerr("ERR  %s" % e)
                 return
         if not os.path.exists(self.inc_dir):
             try:
                 os.makedirs(self.inc_dir)
             except OSError as e:
-                logerr("%s: ERR  %s" % (skin_name, e))
+                logerr("ERR  %s" % e)
                 return
 
         self.all_file = "%s/alldumps.inc" % (self.inc_dir)
@@ -375,7 +366,7 @@ class SqlBackup(SearchList):
         try:
             chck = open(self.head_file, 'w+')
         except IOError as e:
-            logerr("%s: ERR  %s" % (skin_name, e))
+            logerr("ERR  %s" % e)
             return
         chck.close()
 
@@ -393,7 +384,7 @@ class SqlBackup(SearchList):
         try:
             strt = open(self.links_file, 'w')
         except IOError as e:
-            logerr("%s: ERR  %s" % (skin_name, e))
+            logerr("ERR  %s" % e)
             return
         strt.write(carry_index)
         strt.close()
@@ -410,8 +401,8 @@ class SqlBackup(SearchList):
 
         readable_time = (datetime.datetime.fromtimestamp(past_time).strftime(
             '%Y-%m-%d %H:%M:%S'))
-        if weewx.debug >= 2 or self.sql_debug >= 2:
-            logdbg("%s DEBUG: starting from %s" % (skin_name, readable_time))
+        if weewx.debug >= 2 or self.sql_debug == 2:
+            logdbg(" starting from %s" % readable_time)
         # If true, setup the remote directory name with a date structure
         # eg: <path to backup directory>/2017/02/12/
         if self.dated_dir:
@@ -425,22 +416,20 @@ class SqlBackup(SearchList):
         if self.my_dbase:
             self.mydbase = self.my_dbase.split()
             mydbase_len = len(self.mydbase)
-            #if weewx.debug >= 2 or self.sql_debug >= 2 :
-            if weewx.debug >= 2 or self.sql_debug >= 2 :
-                logdbg("%s DEBUG: databases, mysql %s named %s" % (
-                    skin_name, mydbase_len, self.mydbase))
+            if weewx.debug >= 2 or self.sql_debug == 2:
+                logdbg(" databases, mysql %s named %s" % (mydbase_len,
+                       self.mydbase))
             if not os.path.exists(mydump_dir):
                 try:
                     os.makedirs(mydump_dir)
                 except OSError as e:
-                    logerr("%s: ERR  %s" % (skin_name, e))
+                    logerr("ERR  %s" % e)
                     return
-            if weewx.debug >= 2 or self.sql_debug >= 2:
-               logdbg("%s DEBUG: directory for mysql backup files %s" % (
-                   skin_name ,mydump_dir))
+            if weewx.debug >= 2 or self.sql_debug == 2:
+                logdbg(" directory for mysql backup files %s" % mydump_dir)
 
             for step in range(mydbase_len):
-                t5 = time.time() # this loops start time
+                t5 = time.time()  # this loops start time
                 my_dbase = self.mydbase[step]
                 # Because we use the  "--where..." clause, we run into trouble
                 # when dumping all tables so we use "--ignore..."  to prevent
@@ -450,47 +439,45 @@ class SqlBackup(SearchList):
                 # of this name; for databases such as mesoraw and sqlite3
                 if len(self.table) < 1:
                     self.ignore = ("--ignore-table=%s.archive_day__metadata" %
-                        my_dbase)
-                    logdbg("%s DEBUG: ALL tables specified,including option %s"
-                        % (skin_name, self.ignore))
+                                   my_dbase)
+                    logdbg("ALL tables specified,including option %s"
+                           % self.ignore)
                 else:
                     self.ignore = ""
-                if weewx.debug >= 2 or self.sql_debug >= 2:
-                    logdbg("%s DEBUG: processing mysql database, %s" % (
-                           skin_name, my_dbase))
-                mydump_file = mydump_dir + "/%s-host.%s-%s-%s.gz"  % (
+                if weewx.debug >= 2 or self.sql_debug == 2:
+                    logdbg(" processing mysql database, %s" % my_dbase)
+                mydump_file = mydump_dir + "/%s-host.%s-%s-%s.gz" % (
                     my_dbase, this_host, file_stamp, self.t_label)
-                if weewx.debug >= 2 or self.sql_debug >= 2:
-                    logdbg("%s DEBUG: dump_file for mysql backup files %s" % (
-                        skin_name, mydump_file))
-                #cmd = "mysqldump -u%s -p%s -h%s -q  %s %s -w\"dateTime>%s\"
+                if weewx.debug >= 2 or self.sql_debug == 2:
+                    logdbg(" dump_file for mysql backup files %s" %
+                           mydump_file)
+                # cmd = "mysqldump -u%s -p%s -h%s -q  %s %s -w\"dateTime>%s\"
                 #       "%s -R --triggers --single-transaction --skip-opt"
                 # We pass a '>' and this requires shell=True
                 cmd = ("mysqldump -u%s -p%s -h%s -q  %s %s -w\"dateTime>%s\""
-                       " %s --single-transaction --skip-opt" %(
-                       self.user, self.passwd, self.host, my_dbase,
-                       self.table, past_time, self.ignore))
+                       " %s --single-transaction --skip-opt" % (
+                        self.user, self.passwd, self.host, my_dbase,
+                        self.table, past_time, self.ignore))
                 dumpcmd = subprocess.Popen(cmd, stdout=subprocess.PIPE,
-                                      stderr=subprocess.PIPE, shell=True)
+                                           stderr=subprocess.PIPE, shell=True)
                 dump_output, dump_err = dumpcmd.communicate()
                 dump_err = dump_err.decode('utf-8')
                 if dump_err:
-                    cmd_err = ("%s  ERROR : %s)" % (skin_name, dump_err))
+                    cmd_err = ("ERROR : %s)" % dump_err)
                     logerr(cmd_err)
                 with gzip.open(mydump_file, 'wb') as f:
                     f.write(dump_output)
                 f.close()
-                t6 = time.time() # this loops finishing  time
+                t6 = time.time()  # this loops finishing  time
 
                 # obfuscate for logs: hide_password = True as default
                 if self.hide_pass:
-                    log_cmd = cmd.replace(self.user ,"XxXxX", 1 )
-                    log_cmd = log_cmd.replace(self.passwd ,"XxXxX", 1 )
+                    log_cmd = cmd.replace(self.user, "XxXxX", 1)
+                    log_cmd = log_cmd.replace(self.passwd, "XxXxX", 1)
                 else:
-                   log_cmd = cmd
-                if weewx.debug >= 2 or self.sql_debug >= 2:
-                    logdbg("%s DEBUG: %.2f secs to run %s" % (
-                            skin_name, (t6-t5), log_cmd))
+                    log_cmd = cmd
+                if weewx.debug >= 2 or self.sql_debug == 2:
+                    logdbg(" %.2f secs to run %s" % ((t6-t5), log_cmd))
 
                 if self.gen_report:
                     line_count = "100"
@@ -499,7 +486,8 @@ class SqlBackup(SearchList):
                         log_cmd = ("%s \n\n %s \n" % (log_cmd, cmd_err))
                         cmd_err = ''
                     self.report(self.inc_dir, carry_index, log_cmd,
-                         mydump_file, my_dbase, line_count, sql_name, start_loop)
+                                mydump_file, my_dbase, line_count,
+                                sql_name, start_loop)
                     carry_index = link_index
                     start_loop = strt_loop
 
@@ -507,98 +495,95 @@ class SqlBackup(SearchList):
         if self.sq_dbase:
             self.dbase = self.sq_dbase.split()
             dbase_len = len(self.dbase)
-            if weewx.debug >= 2 or self.sql_debug >= 2:
-                logdbg("%s DEBUG: databases, sqlite %s named %s" %
-                    (skin_name, dbase_len, self.dbase))
+            if weewx.debug >= 2 or self.sql_debug == 2:
+                logdbg(" databases, sqlite %s named %s" %
+                       (dbase_len, self.dbase))
             if not os.path.exists(dump_dir):
                 try:
                     os.makedirs(dump_dir)
                 except OSError as e:
-                    logerr("%s: ERR  %s" % (skin_name, e))
+                    logerr("%s" % e)
                     return
-            if weewx.debug >= 2 or self.sql_debug >= 2:
-               logdbg("%s DEBUG: directory for sqlite backup files %s" % (
-                   skin_name, dump_dir))
+            if weewx.debug >= 2 or self.sql_debug == 2:
+                logdbg(" directory for sqlite backup files %s" % dump_dir)
 
             for step in range(dbase_len):
-                t7 = time.time() # this loops start time
+                t7 = time.time()  # this loops start time
                 d_base = self.dbase[step]
 
-                # one-shot pass to get a header file - used for table reconstruction
-                # for partial dumps, could be useful for full?
+                # one-shot pass to get a header file - used for tablei
+                # reconstruction for partial dumps, could be useful for full?
                 schema_file = dump_dir + "/%s-host.%s-schema.sql" % (
-                                   d_base, this_host )
+                                   d_base, this_host)
                 if not os.path.isfile(schema_file):
 
-                   cmd = ("sqlite3 %s/%s '.schema %s'" % (
+                    cmd = ("sqlite3 %s/%s '.schema %s'" % (
                           self.sq_root, d_base, self.sqtable))
-                   #cmd = ("sqlite3 -header -insert /var/lib/weewx/%s "
-                   #       "'SELECT * from archive where dateTime = "
-                   #       " (select max (dateTime) from archive );'" % (d_base))
-                   headcmd = subprocess.Popen(cmd, stdout=subprocess.PIPE,
-                                     stderr=subprocess.PIPE, shell=True)
-                   hed_output, hed_err = headcmd.communicate()
-                   hed_output = hed_output.decode('utf-8')
-                   hed_err = hed_err.decode('utf-8')
-                   if hed_err:
-                       cmd_err = ("%s  ERROR : %s)" % (skin_name, hed_err))
-                       logerr(cmd_err)
-                   with open(schema_file, 'w+') as f:
-                       f.write(hed_output)
-                   f.close()
+                    # cmd = ("sqlite3 -header -insert /var/lib/weewx/%s "
+                    #       "'SELECT * from archive where dateTime = "
+                    #    " (select max (dateTime) from archive );'" % (d_base))
+                    headcmd = subprocess.Popen(cmd, stdout=subprocess.PIPE,
+                                               stderr=subprocess.PIPE,
+                                               shell=True)
+                    hed_output, hed_err = headcmd.communicate()
+                    hed_output = hed_output.decode('utf-8')
+                    hed_err = hed_err.decode('utf-8')
+                    if hed_err:
+                        cmd_err = ("ERROR : %s)" % hed_err)
+                        logerr(cmd_err)
+                    with open(schema_file, 'w+') as f:
+                        f.write(hed_output)
+                    f.close()
 
-                if weewx.debug >= 2 or self.sql_debug >= 2:
-                    logdbg("%s DEBUG: processing sqlite database, %s" % (skin_name, d_base))
-                #dump_file = dump_dir + "/%s-host.%s-%s-%s.gz"  % (
+                if weewx.debug >= 2 or self.sql_debug == 2:
+                    logdbg(" processing sqlite database, %s" % d_base)
+                # dump_file = dump_dir + "/%s-host.%s-%s-%s.gz"  % (
                 #               d_base, this_host, file_stamp, self.t_label)
-                #logdbg("%s DEBUG           : dump_file for sqlite backup files %s" % (
-                #   skin_name, dump_dir))
+                # logdbg("dump_file for sqlite backup files %s" %
+                #   dump_dir)
                 # We pass a '|' and this also requires shell=True
-                #cmd = "echo '.dump %s' | sqlite3 /var/lib/weewx/%s" % (
-                        # self.table, d_base)
+                # cmd = "echo '.dump %s' | sqlite3 /var/lib/weewx/%s" % (
+                #         self.table, d_base)
                 # csv method
                 # https://sqlite.org/cli.html
-                #cmd = ("sqlite3 -insert /var/lib/weewx/%s "
+                # cmd = ("sqlite3 -insert /var/lib/weewx/%s "
                 #       " 'SELECT * from archive where dateTime > %s;'" % (
                 #         d_base, past_time))
-                #loginf("self.part.sql is ?? : %s" % self.part_sql)
+                # loginf("self.part.sql is ?? : %s" % self.part_sql)
                 if self.part_sql:
-                    #loginf("if self.part.sql says True or : %s" % self.part_sql)
-                    dump_file = dump_dir + "/%s-host.%s-%s-%s.gz"  % (
+                    # loginf("ifself.part.sql says True or:%s" % self.part_sql)
+                    dump_file = dump_dir + "/%s-host.%s-%s-%s.gz" % (
                                    d_base, this_host, file_stamp, self.t_label)
-                    if weewx.debug >= 2 or self.sql_debug >= 2:
-                        logdbg("%s DEBUG: dump_file for sqlite backup files %s" % (
-                            skin_name, dump_file))
+                    if weewx.debug >= 2 or self.sql_debug == 2:
+                        logdbg(" dump_file for sqlite backup files %s" %
+                               dump_file)
                     cmd = ("sqlite3 %s/%s '.mode \"insert\" \"%s\"', "
                            " 'SELECT * from %s where dateTime > %s;'" % (
                              self.sq_root, d_base, self.sqtable, self.sqtable,
                              past_time))
                 else:
-                    dump_file = dump_dir + "/%s-host.%s-all.gz"  % (
+                    dump_file = dump_dir + "/%s-host.%s-all.gz" % (
                                    d_base, this_host)
-                    if weewx.debug >= 2 or self.sql_debug >= 2:
-                        logdbg("%s DEBUG: dump_file for sqlite backup files %s" % (
-                            skin_name, dump_file))
+                    if weewx.debug >= 2 or self.sql_debug == 2:
+                        logdbg(" dump_file for sqlite backup files %s" %
+                               dump_file)
                     cmd = "echo '.dump %s' | sqlite3 %s/%s" % (
                              self.table, self.sq_root, d_base)
 
                 dumpcmd = subprocess.Popen(cmd, stdout=subprocess.PIPE,
-                                      stderr=subprocess.PIPE, shell=True)
+                                           stderr=subprocess.PIPE, shell=True)
                 dump_output, dump_err = dumpcmd.communicate()
-                dump_output = dump_output.decode('utf-8')
                 dump_err = dump_err.decode('utf-8')
-                #dumpoutput = dump_output.encode("utf-8").strip()
                 if dump_err:
-                    cmd_err = ("%s  ERROR : %s)" % (skin_name, dump_err))
+                    cmd_err = ("ERROR : %s)" % dump_err)
                     logerr(cmd_err)
                 with gzip.open(dump_file, 'wb') as f:
                     f.write(dump_output)
                 f.close()
-                t8 = time.time() # this loops start time
+                t8 = time.time()  # this loops start time
 
-                if weewx.debug >= 2 or self.sql_debug >= 2:
-                    logdbg("%s DEBUG: %.2f secs to run %s" % (
-                            skin_name, (t8-t7), cmd))
+                if weewx.debug >= 2 or self.sql_debug == 2:
+                    logdbg(" %.2f secs to run %s" % ((t8-t7), cmd))
 
                 if self.gen_report:
                     line_count = "20"
@@ -609,7 +594,8 @@ class SqlBackup(SearchList):
                     else:
                         log_cmd = cmd
                     self.report(self.inc_dir, carry_index, log_cmd,
-                          dump_file, d_base, line_count, sql_name, start_loop)
+                                dump_file, d_base, line_count,
+                                sql_name, start_loop)
                     carry_index = link_index
                     start_loop = strt_loop
 
@@ -623,34 +609,34 @@ class SqlBackup(SearchList):
 
         # decide if we're adding content or else: nullifying
         if self.gen_report:
-            sys_links=open(self.sys_file, 'w')
-            if self.sql_debug >= 4 :
-                sys_index =('<b>System ::</b>'
-                            '&nbsp;&nbsp;&nbsp;&nbsp;'
-                            '<a href="#disk">disks</a>&nbsp;-&nbsp;'
-                            '<a href="#memory">memory</a>&nbsp;-&nbsp;'
-                            '<a href="#mounts">mounts</a>&nbsp;&nbsp;'
-                            '<b>DEBUG output :: </b>'
-                            '<a href="#logs">logs</a>&nbsp;-&nbsp;'
-                            '<a href="#mysql">mysql</a>&nbsp;-&nbsp;'
-                            '<a href="#sql">sql</a>&nbsp;&nbsp;'
-                            '<br>')
+            sys_links = open(self.sys_file, 'w')
+            if self.sql_debug >= 4:
+                sys_index = ('<b>System ::</b>'
+                             '&nbsp;&nbsp;&nbsp;&nbsp;'
+                             '<a href="#disk">disks</a>&nbsp;-&nbsp;'
+                             '<a href="#memory">memory</a>&nbsp;-&nbsp;'
+                             '<a href="#mounts">mounts</a>&nbsp;&nbsp;'
+                             '<b>DEBUG output :: </b>'
+                             '<a href="#logs">logs</a>&nbsp;-&nbsp;'
+                             '<a href="#mysql">mysql</a>&nbsp;-&nbsp;'
+                             '<a href="#sql">sql</a>&nbsp;&nbsp;'
+                             '<br>')
             else:
-                sys_index =('<br>&nbsp;&nbsp;&nbsp;<b>System ::</b>'
-                            '&nbsp;&nbsp;&nbsp;&nbsp;'
-                            '<a href="#disk">disks</a>&nbsp;-&nbsp;'
-                            '<a href="#memory">memory</a>&nbsp;-&nbsp;'
-                            '<a href="#mounts">mounts</a>&nbsp;&nbsp;'
-                            '<br>')
+                sys_index = ('<br>&nbsp;&nbsp;&nbsp;<b>System ::</b>'
+                             '&nbsp;&nbsp;&nbsp;&nbsp;'
+                             '<a href="#disk">disks</a>&nbsp;-&nbsp;'
+                             '<a href="#memory">memory</a>&nbsp;-&nbsp;'
+                             '<a href="#mounts">mounts</a>&nbsp;&nbsp;'
+                             '<br>')
 
-            h_tml =[sys_index, "<hr>"]
+            h_tml = [sys_index, "<hr>"]
             sys_links.writelines(h_tml)
             sys_links.close()
 
             tl = open(self.tail_file, 'w')
             tl.write('\n<a id="disk"></a><a href="#Top">Back to top</a><h2>'
-                       ' Disk Usage: </h2>&nbsp;&nbsp;&nbsp;&nbsp;\n'
-                       '<pre class="gry">')
+                     ' Disk Usage: </h2>&nbsp;&nbsp;&nbsp;&nbsp;\n'
+                     '<pre class="gry">')
             tl.close()
             os.system("df -h >> %s" % self.tail_file)
             tl = open(self.tail_file, 'a')
@@ -661,8 +647,8 @@ class SqlBackup(SearchList):
             os.system("free -h >> %s" % self.tail_file)
             tl = open(self.tail_file, 'a')
             tl.write('</pre><hr>\n<a id="mounts"></a><a href="#Top">Back to top'
-                       '</a><h2> Mounted File Systems: </h2>&nbsp;&nbsp;&nbsp;'
-                       '&nbsp;\n<pre class="gry">')
+                     '</a><h2> Mounted File Systems: </h2>&nbsp;&nbsp;&nbsp;'
+                     '&nbsp;\n<pre class="gry">')
             tl.close()
             os.system("mount >> %s" % self.tail_file)
             tl = open(self.tail_file, 'a')
@@ -670,18 +656,18 @@ class SqlBackup(SearchList):
             tl.close()
 
             # add debug extras to sqlbackup/index.html
-            if self.sql_debug >= 4 :
+            if self.sql_debug >= 4:
                 tl = open(self.tail_file, 'a')
                 tl.write('<hr>\n<h2> DEBUG output</h2>\n'
-                           '<a id="logs"></a><a href="#Top">Back to top</a>'
-                           '<h2> Log snippet: </h2>&nbsp;&nbsp;&nbsp;&nbsp;\n'
-                           '<pre class="gry">')
+                         '<a id="logs"></a><a href="#Top">Back to top</a>'
+                         '<h2> Log snippet: </h2>&nbsp;&nbsp;&nbsp;&nbsp;\n'
+                         '<pre class="gry">')
                 tl.close()
                 # sanitize the output. If we get a cheetahgenerator error
                 # referencing an #include we risk getting stuck in a
                 # loop, in a loop.
-                os.system("grep /var/log/syslog -e '#' -v|grep  -e 'sqlbackup'"
-                          "| tail -n50 >> %s"% self.tail_file)
+                os.system("grep %s -e '#' -v|grep  -e 'sqlbackup'"
+                          "| tail -n50 >> %s" % (self.log_dir, self.tail_file))
                 # default install finds only 1 database, deal with it only
                 if os.path.exists(mydump_dir):
                     tl = open(self.tail_file, 'a')
@@ -698,11 +684,11 @@ class SqlBackup(SearchList):
                     tl = open(self.tail_file, 'a')
                     tl.write('</pre><hr>'
                              '\n<a id="sql"></a><a href="#Top">Back to top</a>'
-                             '<h2>sqlite files: </h2>&nbsp;&nbsp;&nbsp;&nbsp;\n'
+                             '<h2>sqlite files:</h2>&nbsp;&nbsp;&nbsp;&nbsp;\n'
                              '<pre class="gry">\n%s\n\n' % dump_dir)
                     tl.close()
                     os.system("ls -gtr %s | tail -n10 >> %s" % (
-                              dump_dir,self.tail_file))
+                              dump_dir, self.tail_file))
 
                 tl = open(self.tail_file, 'a')
                 tl.write('</pre>\n')
@@ -725,94 +711,83 @@ class SqlBackup(SearchList):
 
         # and then the whole process's finishing time, which will only appear
         # in the system logs (not the html report, that's done and dusted)
-        t2= time.time()
-        loginf("%s: Total time used in backups "
-                      "and report output: %.2f seconds" % (skin_name, (t2-t1)))
-
-        # Sorry Squire! Just cleaning up any mess we made. As you were...
-        logdbg("%s DEBUG: Resetting weewx.debug logging back to %s mode" % (
-                   skin_name, weewx.debug))
-        if weewx.debug:
-            syslog.setlogmask(syslog.LOG_UPTO(syslog.LOG_DEBUG))
-        else:
-            syslog.setlogmask(syslog.LOG_UPTO(syslog.LOG_INFO))
-
+        t2 = time.time()
+        loginf("Total time used in backups "
+               "and report output: %.2f seconds" % (t2-t1))
 
     def report(self, inc_dir, carry_index, log_cmd, dump_file, data_base,
                line_count, sql_name, start_loop):
-            # If we're reporting then we need to build the text output as we
-            # loop through the databases. We can do more than one when we
-            # specify a space seperated list in skin.conf
-            # Create output for a report using templates *.inc
-            global link_index
-            global strt_loop
-            t3= time.time()
-            inc_file = "%s/%s.inc" % (inc_dir, data_base)
-            self.links_file = "%s/links.inc" % inc_dir
-            self.all_file = "%s/alldumps.inc" % inc_dir
+        # If we're reporting then we need to build the text output as we
+        # loop through the databases. We can do more than one when we
+        # specify a space seperated list in skin.conf
+        # Create output for a report using templates *.inc
+        global link_index
+        global strt_loop
+        t3 = time.time()
+        inc_file = "%s/%s.inc" % (inc_dir, data_base)
+        self.links_file = "%s/links.inc" % inc_dir
+        self.all_file = "%s/alldumps.inc" % inc_dir
 
-            # we are generating a report so we overwrite the "no report" message
-            if start_loop <= 0:
-                strt_loop = 1
-                strt = open(self.all_file, 'w')
-                strt.write("\n")
-                strt.close()
+        # we are generating a report so we overwrite the "no report" message
+        if start_loop <= 0:
+            strt_loop = 1
+            strt = open(self.all_file, 'w')
+            strt.write("\n")
+            strt.close()
 
-            next_index = ('%s.<a href="#%s">%s</a>&nbsp;&nbsp;' % (
-                          sql_name, data_base, data_base))
-            link_index = carry_index + next_index
+        next_index = ('%s.<a href="#%s">%s</a>&nbsp;&nbsp;' % (
+                      sql_name, data_base, data_base))
+        link_index = carry_index + next_index
 
-            if not os.path.exists(inc_dir):
-                try:
-                    os.makedirs(inc_dir)
-                except OSError as e:
-                    logerr("%s: ERR  %s" % (skin_name, e))
-                    return
+        if not os.path.exists(inc_dir):
+            try:
+                os.makedirs(inc_dir)
+            except OSError as e:
+                logerr("%s: ERR  %s" % (skin_name, e))
+                return
 
-            inc = open(inc_file, 'w')
-            inc.write('&nbsp;&nbsp;&nbsp;&nbsp;<a id="%s"></a><a href='
-                      '"#Top">Back to top</a>\n<h2>Extract from the %s '
-                      'Database dump file: </h2>\n<pre class="gry">%s\n\n\n' % (
-                      data_base, data_base, log_cmd))
-            inc.close()
-            #my_head = "zcat  %s | head -n%s >> %s" % (
-            #           dump_file, line_count, inc_file)
-            # broken pipe error from wee_reports seems harmless but is annoying
-            # & is due to head truncating the operation. Ah! more at ...
-            # https://blog.nelhage.com/2010/02/a-very-subtle-bug/
-            # switch to subprocess method and ignore it.
-            #os.system(my_head)
-            my_head = "zcat  %s | head -n%s " % (
-                       dump_file, line_count)
-            headcmd = subprocess.Popen(my_head, stdout=subprocess.PIPE,
-                                 stderr=subprocess.PIPE, shell=True)
-            myhead_out, myhead_err = headcmd.communicate()
-            myhead_out = myhead_out.decode('utf-8')
-            myhead_err = myhead_err.decode('utf-8')
-            inc = open(inc_file, 'a')
-            all_head =[myhead_out, "\n[...]\n\n"]
-            inc.writelines(all_head)
-            inc.close()
-            my_tail = "zcat %s | tail -n20 >> %s" % (dump_file, inc_file)
-            os.system(my_tail)
+        inc = open(inc_file, 'w')
+        inc.write('&nbsp;&nbsp;&nbsp;&nbsp;<a id="%s"></a><a href='
+                  '"#Top">Back to top</a>\n<h2>Extract from the %s '
+                  'Database dump file: </h2>\n<pre class="gry">%s\n\n\n' % (
+                   data_base, data_base, log_cmd))
+        inc.close()
+        # my_head = "zcat  %s | head -n%s >> %s" % (
+        #           dump_file, line_count, inc_file)
+        # broken pipe error from wee_reports seems harmless but is annoying
+        # & is due to head truncating the operation. Ah! more at ...
+        # https://blog.nelhage.com/2010/02/a-very-subtle-bug/
+        # switch to subprocess method and ignore it.
+        # os.system(my_head)
+        my_head = "zcat  %s | head -n%s " % (
+                   dump_file, line_count)
+        headcmd = subprocess.Popen(my_head, stdout=subprocess.PIPE,
+                                   stderr=subprocess.PIPE, shell=True)
+        myhead_out, myhead_err = headcmd.communicate()
+        myhead_out = myhead_out.decode('utf-8')
+        myhead_err = myhead_err.decode('utf-8')
+        inc = open(inc_file, 'a')
+        all_head = [myhead_out, "\n[...]\n\n"]
+        inc.writelines(all_head)
+        inc.close()
+        my_tail = "zcat %s | tail -n20 >> %s" % (dump_file, inc_file)
+        os.system(my_tail)
 
-            l_inks=open(self.links_file, 'w')
-            h_tml =[link_index, "</br>"]
-            l_inks.writelines(h_tml)
-            l_inks.close()
+        l_inks = open(self.links_file, 'w')
+        h_tml = [link_index, "</br>"]
+        l_inks.writelines(h_tml)
+        l_inks.close()
 
-            os.system("cat %s >> %s" % (inc_file, self.all_file))
-            all_lot = open(self.all_file, 'a')
-            all_lot.write("</pre>")
-            all_lot.close()
+        os.system("cat %s >> %s" % (inc_file, self.all_file))
+        all_lot = open(self.all_file, 'a')
+        all_lot.write("</pre>")
+        all_lot.close()
 
-            if weewx.debug >= 2 or self.sql_debug >= 2 :
-                t4= time.time()
-                logdbg("%s DEBUG: Created %s in %.2f secs" % (
-                       skin_name, inc_file, t4-t3))
+        if weewx.debug >= 2 or self.sql_debug == 2:
+            t4 = time.time()
+            logdbg(" Created %s in %.2f secs" % (inc_file, t4-t3))
 
-            return (link_index, strt_loop)
-
+        return (link_index, strt_loop)
 
 
 if __name__ == '__main__':
