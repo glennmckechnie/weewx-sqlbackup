@@ -159,7 +159,9 @@ report_timing = '2 0 * * *'
     # default is preset as localhost
     #sql_host = "localhost"
 
-    # The default database is read from weewx.conf. It can be overidden here.
+    # The default database that is backed up is the primary database as
+    # configured in weewx.conf. That single database can be overidden here,
+    # or other databases included as required.
     # Use a space seperated list for multiple databases.
     #mysql_database = "weatherpi mesoraw"
     #sql_database = "pmon.sdb weewx.sdb"
@@ -170,9 +172,10 @@ report_timing = '2 0 * * *'
     # for a full dump of sqlite, (mysql works for both full or partial dumps)
     #sql_table = ""
 
-    # The backup location default is preset as /var/backups
-    mysql_bup_dir = "/opt/backups/mysql-backups"
-    sql_bup_dir = "/opt/backups/sql-backups"
+    # The backup location default is preset as /var/backups, this can be
+    # redefined if required.
+    #mysql_bup_dir = "/opt/backups/mysql-backups"
+    #sql_bup_dir = "/opt/backups/sql-backups"
 
     # A dated_dir structure. Defaults to 'True'. Turn it off with 'False'
     #sql_dated_dir = 'False'
@@ -190,17 +193,26 @@ report_timing = '2 0 * * *'
     # This value will always be increased by 900 seconds (86400 + 900) to
     # ensure backups overlap.
     #sql_period = '604800' #time in seconds ('86400' is the default setting)
-    #sql_label = '7days' # ('daily' is the default) this isshould be  a
-    # meaningful string for the filename, use text to match your sql_period
+    #sql_label = '7days' # ('daily' is the default)i
+    # This should be a meaningful string for the filename, eg: use text to
+    # match your sql_period. eg:-
     # ##sql_period = '1262264400' # time in seconds (2 years)
     # ##sql_label = '2years' # meaningful string for the filename
 
     # Originally the sqlite databases were dumped in their entirety. This
     # could place an excessive load on weewx. The default now is to always
-    # do partial dumps - True. Set to False for initial, full backups only?
+    # do partial dumps ie: True. Set to False for initial, full backups only?
     # Use with discretion.
     #part_sqlite = 'False
 
+    # For the debug (level 2) statements to appear in the logs, weewx4
+    # requires the following inserted as a new section in weewx.conf.
+    #[Logging]
+    #    [[loggers]]
+    #         [[[user.sqlbackup]]]
+    #             level = DEBUG
+    #             handlers = syslog,
+    #             propagate = 0
     # Default is preset to "0" so commenting it out will disable DEBUG logging
     # from this skin (will also log when weewx.conf debug is set to "2")
     # Set sql_debug to "2" for extra DEBUG info in the logs.
