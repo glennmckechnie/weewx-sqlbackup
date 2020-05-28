@@ -11,7 +11,7 @@ def loader():
 class SqlBackupInstaller(ExtensionInstaller):
     def __init__(self):
         super(SqlBackupInstaller, self).__init__(
-            version="0.4",
+            version="0.5",
             name='sqlbackup',
             description='Use mysqldump or sqlite3 to create partial backups of'
                         'the weeWX mysql database/s, or full backups of the'
