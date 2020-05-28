@@ -401,7 +401,7 @@ class SqlBackup(SearchList):
 
         readable_time = (datetime.datetime.fromtimestamp(past_time).strftime(
             '%Y-%m-%d %H:%M:%S'))
-        if weewx.debug >= 2 or self.sql_debug == 2:
+        if self.sql_debug == 2 or self.sql_debug == 4:
             logdbg(" starting from %s" % readable_time)
         # If true, setup the remote directory name with a date structure
         # eg: <path to backup directory>/2017/02/12/
@@ -416,7 +416,7 @@ class SqlBackup(SearchList):
         if self.my_dbase:
             self.mydbase = self.my_dbase.split()
             mydbase_len = len(self.mydbase)
-            if weewx.debug >= 2 or self.sql_debug == 2:
+            if self.sql_debug == 2 or self.sql_debug == 4:
                 logdbg(" databases, mysql %s named %s" % (mydbase_len,
                        self.mydbase))
             if not os.path.exists(mydump_dir):
@@ -425,7 +425,7 @@ class SqlBackup(SearchList):
                 except OSError as e:
                     logerr("ERR  %s" % e)
                     return
-            if weewx.debug >= 2 or self.sql_debug == 2:
+            if self.sql_debug == 2 or self.sql_debug == 4:
                 logdbg(" directory for mysql backup files %s" % mydump_dir)
 
             for step in range(mydbase_len):
@@ -444,11 +444,11 @@ class SqlBackup(SearchList):
                            % self.ignore)
                 else:
                     self.ignore = ""
-                if weewx.debug >= 2 or self.sql_debug == 2:
+                if self.sql_debug == 2 or self.sql_debug == 4:
                     logdbg(" processing mysql database, %s" % my_dbase)
                 mydump_file = mydump_dir + "/%s-host.%s-%s-%s.gz" % (
                     my_dbase, this_host, file_stamp, self.t_label)
-                if weewx.debug >= 2 or self.sql_debug == 2:
+                if self.sql_debug == 2 or self.sql_debug == 4:
                     logdbg(" dump_file for mysql backup files %s" %
                            mydump_file)
                 # cmd = "mysqldump -u%s -p%s -h%s -q  %s %s -w\"dateTime>%s\"
@@ -476,7 +476,7 @@ class SqlBackup(SearchList):
                     log_cmd = log_cmd.replace(self.passwd, "XxXxX", 1)
                 else:
                     log_cmd = cmd
-                if weewx.debug >= 2 or self.sql_debug == 2:
+                if self.sql_debug == 2 or self.sql_debug == 4:
                     logdbg(" %.2f secs to run %s" % ((t6-t5), log_cmd))
 
                 if self.gen_report:
@@ -495,7 +495,7 @@ class SqlBackup(SearchList):
         if self.sq_dbase:
             self.dbase = self.sq_dbase.split()
             dbase_len = len(self.dbase)
-            if weewx.debug >= 2 or self.sql_debug == 2:
+            if self.sql_debug == 2 or self.sql_debug == 4:
                 logdbg(" databases, sqlite %s named %s" %
                        (dbase_len, self.dbase))
             if not os.path.exists(dump_dir):
@@ -504,7 +504,7 @@ class SqlBackup(SearchList):
                 except OSError as e:
                     logerr("%s" % e)
                     return
-            if weewx.debug >= 2 or self.sql_debug == 2:
+            if self.sql_debug == 2 or self.sql_debug == 4:
                 logdbg(" directory for sqlite backup files %s" % dump_dir)
 
             for step in range(dbase_len):
@@ -535,7 +535,7 @@ class SqlBackup(SearchList):
                         f.write(hed_output)
                     f.close()
 
-                if weewx.debug >= 2 or self.sql_debug == 2:
+                if self.sql_debug == 2 or self.sql_debug == 4:
                     logdbg(" processing sqlite database, %s" % d_base)
                 # dump_file = dump_dir + "/%s-host.%s-%s-%s.gz"  % (
                 #               d_base, this_host, file_stamp, self.t_label)
@@ -554,7 +554,7 @@ class SqlBackup(SearchList):
                     # loginf("ifself.part.sql says True or:%s" % self.part_sql)
                     dump_file = dump_dir + "/%s-host.%s-%s-%s.gz" % (
                                    d_base, this_host, file_stamp, self.t_label)
-                    if weewx.debug >= 2 or self.sql_debug == 2:
+                    if self.sql_debug == 2 or self.sql_debug == 4:
                         logdbg(" dump_file for sqlite backup files %s" %
                                dump_file)
                     cmd = ("sqlite3 %s/%s '.mode \"insert\" \"%s\"', "
@@ -564,7 +564,7 @@ class SqlBackup(SearchList):
                 else:
                     dump_file = dump_dir + "/%s-host.%s-all.gz" % (
                                    d_base, this_host)
-                    if weewx.debug >= 2 or self.sql_debug == 2:
+                    if self.sql_debug == 2 or self.sql_debug == 4:
                         logdbg(" dump_file for sqlite backup files %s" %
                                dump_file)
                     cmd = "echo '.dump %s' | sqlite3 %s/%s" % (
@@ -582,7 +582,7 @@ class SqlBackup(SearchList):
                 f.close()
                 t8 = time.time()  # this loops start time
 
-                if weewx.debug >= 2 or self.sql_debug == 2:
+                if self.sql_debug == 2 or self.sql_debug == 4:
                     logdbg(" %.2f secs to run %s" % ((t8-t7), cmd))
 
                 if self.gen_report:
@@ -783,7 +783,7 @@ class SqlBackup(SearchList):
         all_lot.write("</pre>")
         all_lot.close()
 
-        if weewx.debug >= 2 or self.sql_debug == 2:
+        if self.sql_debug == 2 or self.sql_debug == 4:
             t4 = time.time()
             logdbg(" Created %s in %.2f secs" % (inc_file, t4-t3))
 
