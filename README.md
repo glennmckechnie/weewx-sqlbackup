@@ -1,6 +1,8 @@
 ## SQLBackup README
 
+**Update Jun 2020**
 
+Works with weewx4, python 2.7 or python 3.x
 
 This skin (sqlbackup) uses a Search List Extension (SLE) of the same name to call mysqldump and/or sqlite3 to dump data from the weeWX database.
 If it's MySQL (MariaDB) then it will dump a user specified timeframe; if it's sqlite then it will dump all of it. The default option in both cases is to only dump the archive tables.
