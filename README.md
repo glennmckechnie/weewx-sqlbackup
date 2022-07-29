@@ -1,23 +1,25 @@
 ## SQLBackup README
 
-**Update Jun 2020**
+**Update Jul 2022**: Minor documentation only
 
 Works with weewx4, python 2.7 or python 3.x
 
 This skin (sqlbackup) uses a Search List Extension (SLE) of the same name to call mysqldump and/or sqlite3 to dump data from the weeWX database.
-If it's MySQL (MariaDB) then it will dump a user specified timeframe; if it's sqlite then it will dump all of it. The default option in both cases is to only dump the archive tables.
-It will do this at regular intervals as specified by the [report_timing](http://www.weewx.com/docs/customizing.htm#customizing_gen_time) feature of weeWX.
+It will dump a user specified timeframe with the default being a daily dump (performed around midnight). In both cases the default is to only dump the archive tables.
+It will do all this at regular intervals as specified by the [report_timing](http://www.weewx.com/docs/customizing.htm#customizing_gen_time) feature of weeWX.
 
-If you dump the whole database, and it's large, you can interfere with weeWXs operation and odd things may start to happen. This will depend on your CPU, database size, weeWX setup, maybe even the weather!
-In most cases this probably won't matter too much and you'll just get a message about skipping reports. If we lock weeWX out of its database for too long though, the weird and wonderful may start to occur, so it's best we don't push it too far.
+This skin was originally configured for partial dumps of the MySQL (MariaDB) databases. It has since been expanded to incorporate partial dumps of the sqlite databases as well.  We thus limit ourselves to a small, very manageable portion of the database (daily, around midnight) and allow weeWX to do its main function - recording our precious data.
 
-This skin was originally configured for MySQL (MariaDB) databases only and we can configure mysqldump to do a partial dump. We can therefore limit ourselves to a small, very manageable portion of the database.
-Because this has since expanded to incorporate sqlite databases, where it captures the whole database, it may be slower and more prone to interfering with weeWX. But compared to MySQL, sqlite is not as demanding so it may still be fit for duty.
-Because we are getting a full backup of the sqlite database on each run, we can perhaps do them less frequently and here the report_timing feature really comes into its own.
+If that default configuration is altered to perform a longer period, in particular a full backup then it may interfere with weeWX, usually just the Report generation cycle. However compared to MySQL, sqlite is not as demanding, so it may still be fit for duty when performing a much longer, or full database backup.
+
+In most cases a full dump probably won't matter too much and you'll just get a message about Report generation being skipped. However, if we lock weeWX out of its database for too long though, then the weird and wonderful may start to occur. Experimenting will define your limits.
+
 Sqlite databases can also be backed up by simply copying them, if you want a similar 'skinned' approach that does just that then have a look at [Using the RSYNC skin as a backup solution.](https://github.com/weewx/weewx/wiki/Using-the-RSYNC-skin-as-a-backup-solution)
 Both these methods aim to create a backup during a quiet window of time (when there are no database writes) that's available within the weeWX cycle.
 
 With the variation in weeWX setups, the only way to know how it will work for you is to give it a try. Just start off gently and DON'T ask for too much at once, be conservative with what you're asking for.
+
+A fresh install should work without any configuration. After midnight the */var/backups* directory should include one of two new directories, *mysql* and/or *sql* depending on which is your default database. That's where your backups will be.
 
 
 ### Installation
@@ -39,15 +41,15 @@ Everything else should be there already as they are listed under Debian as [esse
 
    * Select a suitable *report_timing* stanza
 
-   * Select a suitable archive period and name (sql_period and sql_label.)
+   * [Optional] Select a suitable archive period and name (sql_period and sql_label.)
 
-   * Check that the defaults are correct for your setup.
+   * Check that the remaining defaults are correct for your setup.
 
    * In particular, check the backup directory (xxsql_bup_dir) paths. They will be created on the first run.
 
    * The default is to generate reports - sqlbackup/index.html.
 
-   * The templates take their style from the newskin branch of weeWX - Seasons
+   * The templates take their style from the Seasons skin.
 
 3 restart weewx:
 
