@@ -1,5 +1,11 @@
 ## SQLBackup README
 
+**Update Feb 2024**:
+
+Fix errant comma which broke the sqlite3 SELECT statement!
+
+Change default backup location to /var/tmp for weewx v5.x change
+
 **Update Jul 2022**: Minor documentation only
 
 Works with weewx4, python 2.7 or python 3.x
@@ -33,11 +39,21 @@ Everything else should be there already as they are listed under Debian as [esse
 
 #### Otherwise...
 
-1 Run the installer:
+1 Download
 
-**wee_extension --install weewx-sqlbackup-master.zip**
+**wget -O weewx-sqlbackup.zip https://github.com/glennmckechnie/weewx-sqlbackup/archive/refs/heads/master.zip**
 
-2 Edit the skin.conf file to suit your installation
+2 Run the installer:
+
+For weewx 5.x versions...
+
+**weectl extension install weewx-sqlbackup-master.zip**
+
+For weewx 4.x versions...
+
+**wee_extension --install weewx-sqlbackup.zip**
+
+3 Edit the skin.conf file to suit your installation
 
    * Select a suitable *report_timing* stanza
 
@@ -51,7 +67,7 @@ Everything else should be there already as they are listed under Debian as [esse
 
    * The templates take their style from the Seasons skin.
 
-3 restart weewx:
+4 restart weewx:
 
 **sudo /etc/init.d/weewx stop**
 
