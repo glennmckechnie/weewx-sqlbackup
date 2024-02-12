@@ -169,8 +169,8 @@ class SqlBackup(SearchList):
          seconds (24hours)
         sql_label: mysql; text label to match above. This has meaning
          to you.
-        self.mybup_dir: mysql backup directory: default is '/var/backups/mysql'
-        self.bup_dir: sqlite backup directory: default is '/var/backups/sql'
+        self.mybup_dir: mysql backup directory: default is '/var/tmp/backups/mysql'
+        self.bup_dir: sqlite backup directory: default is '/var/tmp/backups/sql'
         sql_dated_dir: optional string to append to self.xxx_dir. It will be of
          the form 20171231 The default is true. Useful if backups are taken
          often, possibly not so useful if only occasional.
@@ -284,9 +284,9 @@ class SqlBackup(SearchList):
                                                                'archive')
 
         self.mybup_dir = self.generator.skin_dict[skin_name].get(
-            'mysql_bup_dir', '/var/backups/mysql')
+            'mysql_bup_dir', '/var/tmp/backups/mysql')
         self.bup_dir = self.generator.skin_dict[skin_name].get(
-            'sql_bup_dir', '/var/backups/sql')
+            'sql_bup_dir', '/var/tmp/backups/sql')
         self.t_period = self.generator.skin_dict[skin_name].get(
             'sql_period', '86400')
         self.t_label = self.generator.skin_dict[skin_name].get(
@@ -557,7 +557,7 @@ class SqlBackup(SearchList):
                     if self.sql_debug == 2 or self.sql_debug == 4:
                         logdbg(" dump_file for sqlite backup files %s" %
                                dump_file)
-                    cmd = ("sqlite3 %s/%s '.mode \"insert\" \"%s\"', "
+                    cmd = ("sqlite3 %s/%s '.mode \"insert\" \"%s\"' "
                            " 'SELECT * from %s where dateTime > %s;'" % (
                              self.sq_root, d_base, self.sqtable, self.sqtable,
                              past_time))
