@@ -47,7 +47,7 @@ Everything else should be there already as they are listed under Debian as [esse
 
 For weewx 5.x versions...
 
-**weectl extension install weewx-sqlbackup-master.zip**
+**weectl extension install weewx-sqlbackup.zip**
 
 For weewx 4.x versions...
 
@@ -72,6 +72,10 @@ For weewx 4.x versions...
 **sudo /etc/init.d/weewx stop**
 
 **sudo /etc/init.d/weewx start**
+
+or
+
+**systemctl restart weewx**
 
 The html template makes heavy use of #include files to generate the report page. These files are located in /tmp/sqlbackup and will remain after each run (if you need to inspect them or see what's happening). They will be blanked, deleted, re-generated on each run of the skin. ie: they are all renewed and should reflect each runs output. There are no stale files, they are unique to each run - thus their placement in the /tmp directory.
 
